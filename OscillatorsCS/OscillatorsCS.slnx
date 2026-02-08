@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="OscillatorsLibrary/OscillatorsLibrary.csproj" />
+  <Project Path="OscillatorsTest/OscillatorsTest.csproj" />
+</Solution>

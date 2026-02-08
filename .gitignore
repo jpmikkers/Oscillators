@@ -1,3 +1,88 @@
+# Visual Studio
+.vs/
+.vscode/
+*.sln.iml
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+*.msi
+*.msix
+*.msapp
+
+# Test Results
+TestResults/
+*.trx
+*.coverage
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+packages/
+.nuget/
+
+# ReSharper / JetBrains
+.idea/
+*.sln.iml
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper*
+*.DotSettings
+
+# Visual Studio cache/options
+.vs/
+
+# Local History for Visual Studio
+.localhistory/
+
+# BeatPulse healthcheck temp database
+healthchecksdb
+
+# Rider
+.idea/
+*.sln.iml
+.idea_modules/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+~*
+*.swp
+*.swo
+*~
+
+# IDE Settings
+*.editorconfig.user
+launchSettings.json
+
+# Coverage reports
+coverage/
+*.opencover.xml
+*.coveragexml
+
 .DS_Store
 /.build
 /Packages
