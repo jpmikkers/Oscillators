@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="OscillatorsLibrary/OscillatorsLibrary.csproj" />
   <Project Path="OscillatorsTest/OscillatorsTest.csproj" />
+  <Project Path="Playground/Playground.csproj" Id="1b77c714-82d7-4bb7-be2e-ea08f7381186" />
 </Solution>

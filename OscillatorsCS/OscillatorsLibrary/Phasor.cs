@@ -80,6 +80,8 @@ public class Phasor : IPhasorProtocol
     private void UpdateMultiplier()
     {
         var omega = (MathF.Tau * _frequency) / _sampleRate;
+        Zc = 1.0f;
+        Zs = 0.0f;
         Wc = MathF.Cos(omega);
         Ws = MathF.Sin(omega);
         Wcps = Wc + Ws;
