@@ -1,3 +1,6 @@
+# Oscillators C#
+This is a port of the oscillator repo to C#/dotnet, most translation was performed using Claude Haiku 4.5.
+
 # Oscillators
 
 Copyright (c) 2022-2025 Alexandre R. J. François  
