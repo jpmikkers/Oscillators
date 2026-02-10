@@ -1,0 +1,71 @@
+<Window
+    x:Class="OscillatorGUI.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:oscillatorgui="using:OscillatorGUI"
+    xmlns:vm="using:OscillatorGUI.ViewModels"
+    Title="OscillatorGUI"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:DataType="vm:MainWindowViewModel"
+    Icon="/Assets/avalonia-logo.ico"
+    mc:Ignorable="d">
+
+    <Design.DataContext>
+        <!--
+            This only sets the DataContext for the previewer in an IDE,
+            to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs)
+        -->
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <Border
+            Margin="2"
+            Padding="0"
+            BorderBrush="Gray"
+            BorderThickness="2"
+            DockPanel.Dock="Top">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel
+                    Margin="4"
+                    Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <Slider
+                            Width="200"
+                            Maximum="100"
+                            Minimum="0"
+                            Value="{Binding StartNote, Mode=TwoWay}" />
+                        <TextBlock
+                            Margin="4"
+                            Text="{Binding StartNoteAsString, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                    <Slider
+                        Width="200"
+                        Maximum="100"
+                        Minimum="0"
+                        Value="{Binding EndNote, Mode=TwoWay}" />
+                        <TextBlock
+                            Margin="4"
+                            Text="{Binding EndNoteAsString, Mode=OneWay}" />
+                    </StackPanel>
+                </StackPanel>
+                <Slider
+                    Width="200"
+                    Maximum="1000"
+                    Minimum="8"
+                    Value="{Binding NumHistory, Mode=TwoWay}" />
+                <TextBlock
+                    Margin="4"
+                    Text="{Binding NumHistory, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+        <Border Margin="2">
+            <oscillatorgui:SpectrogramPlot NumBands="{Binding NumBands, Mode=OneWay}" NumHistory="{Binding NumHistory, Mode=OneWay}" />
+        </Border>
+    </DockPanel>
+
+</Window>
