@@ -115,7 +115,7 @@ public partial class SpectrogramPlot : Control
 
     static SpectrogramPlot()
     {
-        AffectsRender<SpectrogramPlot>(NumBandsProperty, NumHistoryProperty);
+        AffectsRender<SpectrogramPlot>(NumBandsProperty, NumHistoryProperty, ScaleMinValueProperty, ScaleMaxValueProperty);
 
         for (var i = 0; i < 256; i++)
         {
