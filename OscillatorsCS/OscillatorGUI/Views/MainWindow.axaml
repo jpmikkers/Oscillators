@@ -61,10 +61,29 @@
                 <TextBlock
                     Margin="4"
                     Text="{Binding NumHistory, Mode=OneWay}" />
+                <Slider
+                    Width="200"
+                    Maximum="1"
+                    Minimum="0"
+                    SmallChange="0.01"
+                    LargeChange="0.1"
+                    Value="{Binding ScaleMinValue, Mode=TwoWay}" />
+                <Slider
+                    Width="200"
+                    Maximum="1"
+                    Minimum="0"
+                    SmallChange="0.01"
+                    LargeChange="0.1"
+                    Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
             </StackPanel>
         </Border>
         <Border Margin="2">
-            <oscillatorgui:SpectrogramPlot NumBands="{Binding NumBands, Mode=OneWay}" NumHistory="{Binding NumHistory, Mode=OneWay}" />
+            <oscillatorgui:SpectrogramPlot
+            NumBands="{Binding NumBands, Mode=OneWay}" 
+            NumHistory="{Binding NumHistory, Mode=OneWay}"
+            ScaleMinValue="{Binding ScaleMinValue, Mode=OneWay}"
+            ScaleMaxValue="{Binding ScaleMaxValue, Mode=OneWay}"
+            />
         </Border>
     </DockPanel>
 

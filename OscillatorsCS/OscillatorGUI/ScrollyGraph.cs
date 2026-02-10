@@ -66,6 +66,33 @@ public partial class SpectrogramPlot : Control
         }
     }
 
+    private float _scaleMinValue = 0.0f;
+    private float _scaleMaxValue = 1.0f;
+
+    public static readonly DirectProperty<SpectrogramPlot, float> ScaleMinValueProperty =
+    AvaloniaProperty.RegisterDirect<SpectrogramPlot, float>(
+        nameof(ScaleMinValue),
+        o => o.ScaleMinValue,
+        (o, v) => o.ScaleMinValue = v);
+
+    public float ScaleMinValue
+    {
+        get => _scaleMinValue;
+        set => SetAndRaise(ScaleMinValueProperty, ref _scaleMinValue, value);
+    }
+
+    public static readonly DirectProperty<SpectrogramPlot, float> ScaleMaxValueProperty =
+    AvaloniaProperty.RegisterDirect<SpectrogramPlot, float>(
+        nameof(ScaleMaxValue),
+        o => o.ScaleMaxValue,
+        (o, v) => o.ScaleMaxValue = v);
+
+    public float ScaleMaxValue
+    {
+        get => _scaleMaxValue;
+        set => SetAndRaise(ScaleMaxValueProperty, ref _scaleMaxValue, value);
+    }
+
     /*
         public static readonly StyledProperty<int> NumBandsProperty = AvaloniaProperty.Register<ScrollyGraphControl, int>(nameof(NumBands),10);
         public int NumBands
@@ -226,8 +253,10 @@ public partial class SpectrogramPlot : Control
 
     private uint ColorFromFloat(float v)
     {
-        var t = (uint)Math.Clamp(255.0f*v,0.0f,255.0f);
-        return _gradient[t];
+        var t = Math.Clamp(v,ScaleMinValue,ScaleMaxValue);
+        t = (t - ScaleMinValue) / (ScaleMaxValue - ScaleMinValue);
+        var i = Math.Clamp((int)(t * _gradient.Length),0,_gradient.Length-1);
+        return _gradient[i];
     }
 
     private void RenderBackground(DrawingContext drawingContext)

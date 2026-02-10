@@ -22,6 +22,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     public partial int NumHistory { get; set; } = 100;
 
+    [ObservableProperty]
+    public partial float ScaleMinValue { get; set; } = 0.0f;
+
+    [ObservableProperty]
+    public partial float ScaleMaxValue { get; set; } = 1.0f;
+
     partial void OnStartNoteChanged(int value)
     {
         if (value > EndNote)
@@ -38,6 +44,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
         NumBands = EndNote - StartNote + 1;
         EndNoteAsString = GetNoteName(value);
+    }
+
+    partial void OnScaleMinValueChanged(float value)
+    {
+        if (value > ScaleMaxValue)
+            ScaleMaxValue = value;
+    }
+
+    partial void OnScaleMaxValueChanged(float value)
+    {
+        if (value < ScaleMinValue)
+            ScaleMinValue = value;
     }
 
     private static string GetNoteName(int note)
