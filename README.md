@@ -1,6 +1,16 @@
 # Oscillators C#
 This is a port of the oscillator repo to C#/dotnet, most translation was performed using Claude Haiku 4.5.
 
+## Sample video
+spectrogram of someone speaking. Try to guess the sentence :)
+
+<video width="640" height="360" controls>
+  <source src="https://github.com/user-attachments/assets/afdb183e-9566-4a78-b4fb-2d3e753d1b1e" type="video/mp4">
+  Your browser does not support the video tag.  
+</video>
+
+https://github.com/user-attachments/assets/afdb183e-9566-4a78-b4fb-2d3e753d1b1e
+
 # Oscillators
 
 Copyright (c) 2022-2025 Alexandre R. J. François  
