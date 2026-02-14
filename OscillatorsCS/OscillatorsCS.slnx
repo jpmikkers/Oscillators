@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Baksteen.Waves/Baksteen.Waves.csproj" />
+  <Project Path="Benchmark/Benchmark.csproj" Id="8ce970d9-ad96-4525-ae68-a0d491e0e0ad" />
   <Project Path="OscillatorGUI/OscillatorGUI.csproj" Id="379d9708-5b29-47c2-9090-2a6fa382bbb6" />
   <Project Path="OscillatorsLibrary/OscillatorsLibrary.csproj" />
   <Project Path="OscillatorsTest/OscillatorsTest.csproj" />

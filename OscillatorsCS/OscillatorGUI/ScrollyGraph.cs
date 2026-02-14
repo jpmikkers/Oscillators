@@ -154,10 +154,10 @@ public partial class SpectrogramPlot : Control
     public SpectrogramPlot()
     {
         _clearBitmap = new WriteableBitmap(new PixelSize(1, 1), new Vector(96, 96));
-        var timer = new DispatcherTimer();
-        timer.Interval = TimeSpan.FromSeconds(1 / 60.0);
-        timer.Tick += (sender, e) => { InvalidateVisual(); };
-        timer.Start();
+        //var timer = new DispatcherTimer();
+        //timer.Interval = TimeSpan.FromSeconds(1 / 60.0);
+        //timer.Tick += (sender, e) => { InvalidateVisual(); };
+        //timer.Start();
     }
 
 
@@ -186,6 +186,8 @@ public partial class SpectrogramPlot : Control
             _dataHistory.RemoveAt(0);
             _freedHistory.Enqueue(removed);
         }
+
+        InvalidateVisual();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -346,7 +348,7 @@ public partial class SpectrogramPlot : Control
 
         //AddData(Enumerable.Range(0, NumBands).Select(i => (_frameCount % 256) / 255.0f).ToArray());
 
-        AddData(Enumerable.Range(0, NumBands).Select(i => (float)Random.Shared.NextDouble()).ToArray());
+        //AddData(Enumerable.Range(0, NumBands).Select(i => (float)Random.Shared.NextDouble()).ToArray());
 
         //ResizeBuffers();
         //_prerenderedGlyphCache.SetCapacity(Math.Max(1, 2 * _numCols * _numRows));  // 2 full screens of unique Runes should be an okay limit

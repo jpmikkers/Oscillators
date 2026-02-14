@@ -59,6 +59,13 @@ public class ResonatorBank
         {
             // https://github.com/FrankReiser/ReiserRT_FlyingPhasor
             var k = 1.0f - (_phasors[i].MagnitudeSquared - 1.0f) / 2.0f;
+            // <=>
+            // var k = 1.0f - (0.5*_phasors[i].MagnitudeSquared - 0.5f);
+            // <=>
+            // var k = 1.5f - 0.5*_phasors[i].MagnitudeSquared;
+            // <=>
+            // var k = (3.0f - magsquared) / 2.0f;
+
             _phasors[i] *= k;
         }
     }

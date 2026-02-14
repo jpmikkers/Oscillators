@@ -45,7 +45,7 @@
                     <StackPanel Orientation="Horizontal">
                     <Slider
                         Width="200"
-                        Maximum="100"
+                        Maximum="127"
                         Minimum="0"
                         Value="{Binding EndNote, Mode=TwoWay}" />
                         <TextBlock
@@ -61,24 +61,33 @@
                 <TextBlock
                     Margin="4"
                     Text="{Binding NumHistory, Mode=OneWay}" />
-                <Slider
-                    Width="200"
-                    Maximum="1"
-                    Minimum="0"
-                    SmallChange="0.01"
-                    LargeChange="0.1"
-                    Value="{Binding ScaleMinValue, Mode=TwoWay}" />
-                <Slider
-                    Width="200"
-                    Maximum="1"
-                    Minimum="0"
-                    SmallChange="0.01"
-                    LargeChange="0.1"
-                    Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
+
+                <StackPanel Orientation="Vertical">
+                    <Slider
+                        Width="200"
+                        Maximum="0.25"
+                        Minimum="0"
+                        SmallChange="0.01"
+                        LargeChange="0.1"
+                        Value="{Binding ScaleMinValue, Mode=TwoWay}" />
+                    <Slider
+                        Width="200"
+                        Maximum="0.6"
+                        Minimum="0"
+                        SmallChange="0.01"
+                        LargeChange="0.1"
+                        Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
+                </StackPanel>
             </StackPanel>
         </Border>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <ComboBox ItemsSource="{Binding Devices}" SelectedValue="{Binding SelectedDevice}"  ></ComboBox>
+            <Button Command="{Binding StartSamplingCommand}">Start</Button>			
+            <Button Command="{Binding StopSamplingCommand}">Stop</Button>			
+        </StackPanel>
         <Border Margin="2">
             <oscillatorgui:SpectrogramPlot
+            Name="SpectrogramPlot"
             NumBands="{Binding NumBands, Mode=OneWay}" 
             NumHistory="{Binding NumHistory, Mode=OneWay}"
             ScaleMinValue="{Binding ScaleMinValue, Mode=OneWay}"
