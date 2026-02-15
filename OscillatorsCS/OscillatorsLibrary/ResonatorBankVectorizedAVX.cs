@@ -20,6 +20,7 @@ public class ResonatorBankVectorizedAVX
     private readonly int _k;
     private int updateCount = 0;
 
+    // o/` no need to ask, he's a..
     public ComplexF[] SmoothResonators => _smoothResonators;
 
     /// <summary>
@@ -61,6 +62,8 @@ public class ResonatorBankVectorizedAVX
 
     static readonly Vector256<float> vthree256 = Vector256.Create(3.0f);
     static readonly Vector256<float> vhalf256 = Vector256.Create(0.5f);
+    static readonly Vector256<float> vnegateOddMask = Vector256.Create(0f, -0f, 0f, -0f, 0f, -0f, 0f, -0f);
+
     static readonly int v256Size = Vector256<float>.Count; // 8 floats
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -94,6 +97,23 @@ public class ResonatorBankVectorizedAVX
             }
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Vector256<float> ComplexMul(Vector256<float> x, Vector256<float> y)
+    {
+        // Multiplication:  (a + bi)(c + di) = (ac -bd) + (bc + ad)i
+
+        // x = a0 b0 a1 b1 ,,,
+        // y = c0 d0 c1 d1 ,,,
+
+        // 2 muls, 1 xor, 2 permutes and one hadd
+        // var t1 = x * y * neg;                        // a0c0 -b0d0 ..
+        var t1 = Avx.Xor(x * y, vnegateOddMask);          // a0c0 -b0d0 ..
+        var t2 = Avx.Permute(x, 0b10_11_00_01) * y;      // b0c0  a0d0 ..
+        var t3 = Avx.HorizontalAdd(t1, t2);              // (a0c0-b0d0) (a1c1-b1d1) (b0c0+a0d0) (b1c1+a1d1) ..
+        return Avx.Permute(t3, 0b11_01_10_00);           // (a0c0-b0d0) (b0c0+a0d0) (a1c1-b1d1) (b1c1+a1d1) 
+    }
+
 
     private static void StabilizeVectorizedAvx(ComplexF[] phasors)
     {
@@ -146,9 +166,31 @@ public class ResonatorBankVectorizedAVX
         }
     }
 
+    private static void AdvancePhasors(ComplexF[] phasors, ComplexF[] rotators)
+    {
+        var fphasors = MemoryMarshal.Cast<ComplexF, float>(phasors);
+        var frotators = MemoryMarshal.Cast<ComplexF, float>(rotators);
+
+        var i = 0;
+        for (; i <= fphasors.Length - v256Size; i += v256Size)
+        {
+            var x = Vector256.LoadUnsafe<float>(ref fphasors[i]);
+            var y = Vector256.LoadUnsafe<float>(ref frotators[i]);
+            ComplexMul(x, y).StoreUnsafe<float>(ref fphasors[i]);
+        }
+
+        // Handle remaining elements with generic vectorized approach
+        if (i < fphasors.Length)
+        {
+            var x = LoadPartial(fphasors[i..]);
+            var y = LoadPartial(frotators[i..]);
+            SavePartial(ComplexMul(x, y), fphasors[i..]);
+        }
+    }
+
     public void UpdateWithSample(float sample)
     {
-        for (int i = 0; i < _resonators.Length; i++)
+        for (var i = 0; i < _resonators.Length; i++)
         {
             ref var phasor = ref _phasors[i];
             ref var resonator = ref _resonators[i];
@@ -159,10 +201,9 @@ public class ResonatorBankVectorizedAVX
 
             resonator = ((1f - alpha) * resonator) + (alpha * sample) * phasor;
             smoothresonator = ((1f - beta) * smoothresonator) + beta * resonator;
-
-            // advance phasor (rotate by frequency)
-            phasor *= _rotators[i];
         }
+
+        AdvancePhasors(_phasors, _rotators);
 
         if (updateCount++ >= 3)
         {

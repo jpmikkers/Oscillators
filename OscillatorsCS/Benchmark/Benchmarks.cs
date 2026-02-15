@@ -44,7 +44,7 @@ public class Benchmarks
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void OscillatorBankVectorized()
     {
         for (var i = 0; i < samples.Length; i++)

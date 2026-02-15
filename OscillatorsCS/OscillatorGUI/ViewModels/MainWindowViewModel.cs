@@ -94,11 +94,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private WaveRecorder? waveRecorder;
     private Task? waveRecorderTask;
     private CancellationTokenSource waveRecorderCancellationTokenSource = new();
-    private ResonatorBank? resonatorBank;
+    private ResonatorBankVectorizedAVX? resonatorBank;
 
     private void UpdateResonatorBank()
     {
-        resonatorBank = new ResonatorBank(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 2);
+        resonatorBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 4);
     }
 
     private DispatcherTimer dispatcherTimer;
