@@ -74,7 +74,7 @@ public class ResonatorBankVectorized
     {
         var vecsize = Vector<float>.Count;
 
-        var interleaved = MemoryMarshal.Cast<ComplexF, Vector<float>>(_phasors);
+        var interleaved = MemoryMarshal.Cast<ComplexF, Vector<float>>(_phasors.AsSpan());
 
         for (var j = 0; j < interleaved.Length; j++)
         {
@@ -98,7 +98,7 @@ public class ResonatorBankVectorized
 
         if (remaining > 0)
         {
-            var taildata = MemoryMarshal.Cast<ComplexF, float>(_phasors)[^remaining..];
+            var taildata = MemoryMarshal.Cast<ComplexF, float>(_phasors.AsSpan())[^remaining..];
 
             var item = VectorExt.CreatePartial(taildata);
             var squared = item * item;

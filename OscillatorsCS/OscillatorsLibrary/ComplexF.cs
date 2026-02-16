@@ -54,6 +54,14 @@ public struct ComplexF
         return new ComplexF(value.Real * scalar, value.Imag * scalar);
     }
 
+    public static ComplexF Lerp(ComplexF a, ComplexF b, float t)
+    {
+        return new ComplexF(
+            float.Lerp(a.Real, b.Real, t),
+            float.Lerp(a.Imag, b.Imag, t)
+        );
+    }
+
     public override string ToString()
         => $"{Real} + {Imag}i";
 }

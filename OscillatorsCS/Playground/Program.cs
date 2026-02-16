@@ -21,13 +21,29 @@ ComplexF[] data = new ComplexF[]{
     new(13,14),
     new(15,16),
 
-    new(17,18),
-    new(19,20),
-    new(21,22),
-    new(23,24),
-
     new(25, 26),
     new(27, 28)};
+
+var itl = MemoryMarshal.Cast<ComplexF, float>(data.AsSpan());
+var t = Vector256Helpers.LoadPartial(itl[16..]);
+
+var target = new float[2];
+Vector256Helpers.SavePartial(t,target);
+
+Console.WriteLine($"{t}");
+
+
+// lerp(a, b, t) = a + (b - a) * t  => lerp(a,b,t)=fma(t,b-a,a)
+// a + bt - at
+
+// mix(a,b,t) = (1-t)a+tb => mix(a,b,t)=fma(t,b-a,a)
+// a + bt - at
+
+//Vector256<float> Mix(Vector256<float> a, Vector256<float> b, Vector256<float> alpha)
+//{
+//    return Fma.MultiplyAdd(alpha, Avx.Subtract(b, a), a);
+//}
+
 
 #if NEVER
 void StabilizeVectorized(ComplexF[] data)
@@ -179,7 +195,6 @@ foreach (var item in data)
 
 //Console.WriteLine($"I have {items} items");
 
-#endif
 
 var frequencies = Frequencies.MusicalPitchFrequencies(2*12, 8*12);  // c2 to c8
 var resonatorBank = new ResonatorBankVectorizedAVX(frequencies, sampleRate, 4);
@@ -226,6 +241,7 @@ while (true)
         updateCounter = 0;
     }
 }
+#endif
 
 #if NEVER
 //var phasor = new ComplexF(1f, 0f);

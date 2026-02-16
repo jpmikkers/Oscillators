@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -160,7 +161,7 @@ public partial class SpectrogramPlot : Control
         //timer.Start();
     }
 
-
+    private bool _pendingRender = false;
 
     public void AddData(float[] data)
     {
@@ -187,7 +188,11 @@ public partial class SpectrogramPlot : Control
             _freedHistory.Enqueue(removed);
         }
 
-        InvalidateVisual();
+        if (!_pendingRender)
+        {
+            InvalidateVisual();
+            _pendingRender = true;
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -340,6 +345,8 @@ public partial class SpectrogramPlot : Control
 
     public override void Render(DrawingContext drawingContext)
     {
+        _pendingRender = false;
+
         if (Design.IsDesignMode) return;
 
         Dispatcher.UIThread.VerifyAccess();
