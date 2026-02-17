@@ -37,7 +37,7 @@ public class Benchmarks
         vectorizedAVXBankBundled = new ResonatorBankVectorizedAVXBundled(Frequencies.MusicalPitchFrequencies(0, 200), 44100f, 4);
     }
 
-    //[Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true)]
     public void OscillatorBankNormal()
     {
         for (var i = 0; i < samples.Length; i++)
@@ -55,8 +55,8 @@ public class Benchmarks
         }
     }
 
-    [Benchmark(Baseline = true)]
-    //[Benchmark]
+    //[Benchmark(Baseline = true)]
+    [Benchmark]
     public void OscillatorBankVectorizedAVX()
     {
         for (var i = 0; i < samples.Length; i++)

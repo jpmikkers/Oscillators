@@ -98,7 +98,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void UpdateResonatorBank()
     {
-        resonatorBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 4);
+        resonatorBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 6);
     }
 
     private DispatcherTimer dispatcherTimer;

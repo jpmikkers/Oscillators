@@ -128,8 +128,10 @@ public class ResonatorBankVectorizedAVXBundled
             var smoothresonator = bundle.smoothresonator;
             var phasorSample = phasor * sample;
 
-            resonator = Vector256.Lerp(resonator, phasorSample, bundle.alpha);
-            smoothresonator = Vector256.Lerp(smoothresonator, resonator, bundle.beta);
+            //resonator = Vector256.Lerp(resonator, phasorSample, bundle.alpha);
+            //smoothresonator = Vector256.Lerp(smoothresonator, resonator, bundle.beta);
+            resonator = Vector256Helpers.Lerp(resonator, phasorSample, bundle.alpha);
+            smoothresonator = Vector256Helpers.Lerp(smoothresonator, resonator, bundle.beta);
 
             // advance phasor
             phasor = Vector256Helpers.ComplexMul(phasor, bundle.rotator);

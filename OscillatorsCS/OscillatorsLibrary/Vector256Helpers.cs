@@ -58,4 +58,10 @@ public static class Vector256Helpers
             }
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> Lerp(Vector256<float> a, Vector256<float> b, Vector256<float> alpha)
+    {
+        return Fma.MultiplyAdd(alpha, Avx.Subtract(b, a), a);
+    }
 }

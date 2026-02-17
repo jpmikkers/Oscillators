@@ -186,8 +186,9 @@ public class ResonatorBankVectorizedAVX
 
             var phasorSample = phasor * sample;
 
-            resonator = Vector256.Lerp(resonator, phasorSample, alpha);
-            smoothresonator = Vector256.Lerp(smoothresonator, resonator, beta);
+            // faster than builtin Vector256.Lerp
+            resonator = Vector256Helpers.Lerp(resonator, phasorSample, alpha);
+            smoothresonator = Vector256Helpers.Lerp(smoothresonator, resonator, beta);
 
             Vector256.StoreUnsafe(resonator, ref resonatorsref, (nuint)i);
             Vector256.StoreUnsafe(smoothresonator, ref smoothresonatorsref, (nuint)i);
