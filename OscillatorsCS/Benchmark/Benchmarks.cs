@@ -21,6 +21,7 @@ public class Benchmarks
     private ResonatorBank normalBank;
     private ResonatorBankVectorized vectorizedBank;
     private ResonatorBankVectorizedAVX vectorizedAVXBank;
+    private ResonatorBankVectorizedAVXBundled vectorizedAVXBankBundled;
 
     [GlobalSetup]
     public void Setup()
@@ -33,9 +34,10 @@ public class Benchmarks
         normalBank = new ResonatorBank(Frequencies.MusicalPitchFrequencies(0, 200), 44100f, 4);
         vectorizedBank = new ResonatorBankVectorized(Frequencies.MusicalPitchFrequencies(0, 200), 44100f, 4);
         vectorizedAVXBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(0, 200), 44100f, 4);
+        vectorizedAVXBankBundled = new ResonatorBankVectorizedAVXBundled(Frequencies.MusicalPitchFrequencies(0, 200), 44100f, 4);
     }
 
-    [Benchmark(Baseline = true)]
+    //[Benchmark(Baseline = true)]
     public void OscillatorBankNormal()
     {
         for (var i = 0; i < samples.Length; i++)
@@ -53,12 +55,22 @@ public class Benchmarks
         }
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
+    //[Benchmark]
     public void OscillatorBankVectorizedAVX()
     {
         for (var i = 0; i < samples.Length; i++)
         {
             vectorizedAVXBank.UpdateWithSample(samples[i]);
+        }
+    }
+
+    [Benchmark]
+    public void OscillatorBankVectorizedAVXBundled()
+    {
+        for (var i = 0; i < samples.Length; i++)
+        {
+            vectorizedAVXBankBundled.UpdateWithSample(samples[i]);
         }
     }
 
