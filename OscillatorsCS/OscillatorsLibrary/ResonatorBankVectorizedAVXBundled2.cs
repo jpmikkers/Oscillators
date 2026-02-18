@@ -7,16 +7,16 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Baksteen.Oscillators;
 
-public class ResonatorBankVectorizedAVXBundled
+public class ResonatorBankVectorizedAVXBundled2
 {
-    private struct Bundle
+    private struct Bundle(Vector256<float> phasor, Vector256<float> rotator, Vector128<float> alpha, Vector128<float> beta)
     {
-        public Vector256<float> phasor;
-        public Vector256<float> rotator;
+        public Vector256<float> phasor = phasor;
+        public readonly Vector256<float> rotator = rotator;
         public Vector256<float> resonator;
         public Vector256<float> smoothresonator;
-        public Vector256<float> alpha;
-        public Vector256<float> beta;
+        public readonly Vector128<float> alpha = alpha;
+        public readonly Vector128<float> beta = beta;
     }
 
     private readonly Bundle[] _bundles;
@@ -47,7 +47,7 @@ public class ResonatorBankVectorizedAVXBundled
         return 1.0f - MathF.Exp(-frequency / (sampleRate * k * MathF.Log10(1.0f + frequency)));
     }
 
-    public ResonatorBankVectorizedAVXBundled(float[] frequencies, float sampleRate, int k)
+    public ResonatorBankVectorizedAVXBundled2(float[] frequencies, float sampleRate, int k)
     {
         if (!Avx.IsSupported) throw new NotSupportedException("AVX not supported");
 
@@ -65,8 +65,8 @@ public class ResonatorBankVectorizedAVXBundled
 
             var phasors = new ComplexF[_channelsPerBundle];
             var rotators = new ComplexF[_channelsPerBundle];
-            var alphas = new ComplexF[_channelsPerBundle];
-            var betas = new ComplexF[_channelsPerBundle];
+            var alphas = new float[_channelsPerBundle];
+            var betas = new float[_channelsPerBundle];
 
             var usedChannels = Math.Min(_channelsPerBundle, _numChannels - (i*_channelsPerBundle));
 
@@ -79,14 +79,15 @@ public class ResonatorBankVectorizedAVXBundled
                 rotators[f] = ComplexF.FromPolar(1f, radiansPerSample);
 
                 var alpha = AlphaHeuristic(frequency, _sampleRate, _k);
-                alphas[f] = new ComplexF(alpha, alpha);
-                betas[f] = new ComplexF(alpha, alpha);
+                alphas[f] = alpha;
+                betas[f] = alpha;
             }
 
-            bundle.phasor = Vector256.Create(MemoryMarshal.Cast<ComplexF,float>(phasors));
-            bundle.rotator = Vector256.Create(MemoryMarshal.Cast<ComplexF, float>(rotators));
-            bundle.alpha = Vector256.Create(MemoryMarshal.Cast<ComplexF, float>(alphas));
-            bundle.beta = Vector256.Create(MemoryMarshal.Cast<ComplexF, float>(betas));
+            bundle = new Bundle(
+                Vector256.Create(MemoryMarshal.Cast<ComplexF, float>(phasors)),
+                Vector256.Create(MemoryMarshal.Cast<ComplexF, float>(rotators)),
+                Vector128.Create(alphas),
+                Vector128.Create(betas));
         }
     }
 
@@ -97,38 +98,53 @@ public class ResonatorBankVectorizedAVXBundled
         {
             ref var bundle = ref _bundles[i];
 
-            var phasor = bundle.phasor;
+            var item = bundle.phasor;
+
+            // Compute squared = item * item
+            var squared = Avx.Multiply(item, item);
+            var reimswapped = Avx.Permute(squared, 0b10_11_00_01);
 
             // Compute magnitude squared: (r*r + i*i) for each complex pair
-            var magsquared = Vector256Helpers.MagnitudeSquaredDuplicated(phasor);             // msq0 msq0 msq1 msq1 .. 
+            var magsquared = Avx.Add(squared, reimswapped);
 
             // Compute k = 0.5f * (3.0f - magsquared)
-            var k = Avx.Multiply(vhalf256, Avx.Subtract(vthree256, magsquared));
+            var diff = Avx.Subtract(vthree256, magsquared);
+            var k = Avx.Multiply(vhalf256, diff);
 
             // Apply scaling: item = item * k
-            bundle.phasor = Avx.Multiply(phasor, k);
+            var scaled_item = Avx.Multiply(item, k);
+
+            bundle.phasor = scaled_item;
         }
     }
 
     public void UpdateWithSample(float sample)
     {
-        //resonator = Vector256.Lerp(resonator, phasorSample, bundle.alpha);
-        //smoothresonator = Vector256.Lerp(smoothresonator, resonator, bundle.beta);
-
         for (var i=0; i < _bundles.Length; i++)
         {
             ref var bundle = ref _bundles[i];
             
             var phasor = bundle.phasor;
-            var resonator = Vector256Helpers.Lerp(bundle.resonator, phasor*sample, bundle.alpha);
-            var smoothresonator = Vector256Helpers.Lerp(bundle.smoothresonator, resonator, bundle.beta);
+            var resonator = bundle.resonator;
+            var smoothresonator = bundle.smoothresonator;
+
+            var alpha = Vector256Helpers.DuplicateInterleaved(bundle.alpha);
+            var beta = Vector256Helpers.DuplicateInterleaved(bundle.beta);
+
+            var phasorSample = phasor * sample;
+
+            //resonator = Vector256.Lerp(resonator, phasorSample, bundle.alpha);
+            //smoothresonator = Vector256.Lerp(smoothresonator, resonator, bundle.beta);
+            resonator = Vector256Helpers.Lerp(resonator, phasorSample, alpha);
+            smoothresonator = Vector256Helpers.Lerp(smoothresonator, resonator, beta);
 
             // advance phasor
-            bundle.phasor = Vector256Helpers.ComplexMul(phasor, bundle.rotator);
+            phasor = Vector256Helpers.ComplexMul(phasor, bundle.rotator);
 
-            // store new resonator values
+            // store as late as possible, seems like the jit compiler doesn't try to reorder these optimally
             bundle.resonator = resonator;
             bundle.smoothresonator = smoothresonator;
+            bundle.phasor = phasor;
         }
 
         if (updateCount++ >= 3)

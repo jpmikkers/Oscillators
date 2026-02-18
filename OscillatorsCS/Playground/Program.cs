@@ -7,6 +7,11 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Baksteen.Oscillators;
 
+var tmp1 = Vector128.Create([1.1f, 2.2f, 3.3f, 4.4f]);
+var tmp2 = Vector256Helpers.DuplicateInterleaved(tmp1);
+
+
+
 var sampleRate = 44100f;
 var frequency = 8000f;
 

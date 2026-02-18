@@ -64,4 +64,25 @@ public static class Vector256Helpers
     {
         return Fma.MultiplyAdd(alpha, Avx.Subtract(b, a), a);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> DuplicateInterleaved(Vector128<float> a)
+    {
+        return Vector256.Create(Avx2.UnpackLow(a, a), Avx2.UnpackHigh(a, a));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> MagnitudeSquaredDuplicated(Vector256<float> c)
+    {
+        var squared = Avx.Multiply(c,c);                            // r0^2 i0^2 r1^2 i1^2 ..
+        var reimswapped = Avx.Permute(squared, 0b10_11_00_01);      // i0^2 r0^2 i1^2 r1^2 ..
+        return Avx.Add(squared, reimswapped);                       // msq0 msq0 msq1 msq1 .. 
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> MagnitudeSquaredDuplicatedAlt(Vector256<float> c)
+    {
+        var squared = Avx.Multiply(c, c);                           // r0^2 i0^2 r1^2 i1^2 ..
+        return Avx.HorizontalAdd(squared,squared);                  // msq0 msq0 msq1 msq1 ..
+    }
 }
