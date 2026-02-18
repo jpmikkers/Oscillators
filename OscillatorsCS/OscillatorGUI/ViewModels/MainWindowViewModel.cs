@@ -38,6 +38,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public partial float ScaleMaxValue { get; set; } = 0.5f;
 
     [ObservableProperty]
+    public partial float BoostDecibels { get; set; } = 0.0f;
+
+    [ObservableProperty]
     public partial List<WaveRecorder.RecorderInfo> Devices
     {
         get;
@@ -94,14 +97,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private WaveRecorder? waveRecorder;
     private Task? waveRecorderTask;
     private CancellationTokenSource waveRecorderCancellationTokenSource = new();
-    private ResonatorBankVectorizedAVX? resonatorBank;
+    private ResonatorBankVectorizedAVXBundled? resonatorBank;
 
     private void UpdateResonatorBank()
     {
-        resonatorBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 6);
+        resonatorBank = new ResonatorBankVectorizedAVXBundled(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 1);
     }
 
     private DispatcherTimer dispatcherTimer;
+
+    private float DbToLinear(float dB)
+    {
+        return MathF.Exp((MathF.Log(10.0f) / 20.0f) * dB);
+    }
 
     [RelayCommand]
     public async Task StartSampling()
@@ -121,15 +129,17 @@ public partial class MainWindowViewModel : ViewModelBase
         //};
         //dispatcherTimer.Start();
 
-        waveRecorder = new WaveRecorder(44100, SampleFormat.Fmt16, SampleChannels.Mono, TimeSpan.FromMilliseconds(25), 4);
+        waveRecorder = new WaveRecorder(44100, SampleFormat.Fmt16, SampleChannels.Mono, TimeSpan.FromMilliseconds(25), 6);
 
         waveRecorder.Mono16Process = (buffer) =>
         {
             if (resonatorBank is not null)
             {
+                var multiplier = DbToLinear(BoostDecibels) / 32768f;
+
                 for (int i = 0; i < buffer.Length; i++)
                 {
-                    resonatorBank.UpdateWithSample(buffer.Span[i].Mono / 10000.0f);
+                    resonatorBank.UpdateWithSample(Math.Clamp(buffer.Span[i].Mono * multiplier,-1f,1f));
                 }
 
                 var spectrumline = resonatorBank.SmoothResonators.Select(x => x.Magnitude).ToArray();
@@ -141,9 +151,11 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (resonatorBank is not null)
             {
+                var multiplier = DbToLinear(BoostDecibels) / 32768f;
+
                 for (int i = 0; i < buffer.Length; i++)
                 {
-                    resonatorBank.UpdateWithSample(buffer.Span[i].Left / 10000.0f);
+                    resonatorBank.UpdateWithSample(Math.Clamp(buffer.Span[i].Left * multiplier, -1f, 1f));
                 }
 
                 var spectrumline = resonatorBank.SmoothResonators.Select(x => x.Magnitude).ToArray();

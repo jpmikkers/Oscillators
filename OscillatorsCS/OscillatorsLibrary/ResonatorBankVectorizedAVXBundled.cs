@@ -33,7 +33,14 @@ public class ResonatorBankVectorizedAVXBundled
     static readonly Vector256<float> vhalf256 = Vector256.Create(0.5f);
 
     // o/` no need to ask, he's a..
-    public ComplexF[] SmoothResonators => _smoothResonators;    // TODO!!!
+    public ComplexF[] SmoothResonators
+    {
+        get
+        {
+            CopySmoothResonators();
+            return _smoothResonators;    // TODO!!!
+        }
+    }
 
     /// <summary>
     /// Computes the alpha heuristic for smoothing factor based on frequency and sample rate.
@@ -135,6 +142,25 @@ public class ResonatorBankVectorizedAVXBundled
         {
             updateCount = 0;
             StabilizeVectorizedAvx();
+        }
+    }
+
+    private void CopySmoothResonators()
+    {
+        var i = 0;
+        var bi = 0;
+
+        var fsmoothresonators = MemoryMarshal.Cast<ComplexF, float>(_smoothResonators.AsSpan());
+        ref var smoothresonatorsref = ref MemoryMarshal.GetReference(fsmoothresonators);
+
+        for (; i <= (_numChannels - _channelsPerBundle); i+=_channelsPerBundle, bi++)
+        {
+            Vector256.StoreUnsafe(_bundles[bi].smoothresonator, ref smoothresonatorsref, (nuint)i*2);
+        }
+
+        if (i < _numChannels)
+        {
+            Vector256Helpers.SavePartial(_bundles[bi].smoothresonator, fsmoothresonators[(i*2)..]);
         }
     }
 }

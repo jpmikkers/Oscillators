@@ -78,6 +78,13 @@
                         LargeChange="0.1"
                         Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
                 </StackPanel>
+
+                <Slider 
+                    Orientation="Vertical"
+                    Minimum="0.0"
+                    Maximum="72.0"
+                    Value="{Binding BoostDecibels, Mode=TwoWay}">
+                 </Slider>
             </StackPanel>
         </Border>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
