@@ -1,41 +1,66 @@
 ﻿
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography.X509Certificates;
 using Baksteen.Oscillators;
 
-var tmp1 = Vector128.Create([1.1f, 2.2f, 3.3f, 4.4f]);
-var tmp2 = Vector256Helpers.DuplicateInterleaved(tmp1);
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+
+ComplexF[] x = [new(1, 2), new(3, 4), new(5, 6), new(7, 8)];
+ComplexF[] y = [new(11,12),new(13,14),new(15,16),new(17,18)];
+
+var vx = Vector256Helpers.LoadPartial(x);
+var vy = Vector256Helpers.LoadPartial(y);
+
+var r = Avx2.Blend(vx, vy, 0b00001111);
+Console.WriteLine($"{r}");
+
+
+//Vector256Complex vector256Complex = new();
+//vector256Complex.items[0] = new ComplexF(1, 2);
+//vector256Complex.items[1] = new ComplexF(3, 4);
+//vector256Complex.items[2] = new ComplexF(5, 6);
+//vector256Complex.items[3] = new ComplexF(7, 8);
+
+//Console.WriteLine($"{vector256Complex.vector}");
+
+
+//var tmp1 = Vector128.Create([1.1f, 2.2f, 3.3f, 4.4f]);
+//var tmp2 = Vector256Helpers.DuplicateInterleaved(tmp1);
 
 
 
-var sampleRate = 44100f;
-var frequency = 8000f;
+//var sampleRate = 44100f;
+//var frequency = 8000f;
 
-ComplexF[] data = new ComplexF[]{
-    new(1,2),
-    new(3,4),
-    new(5,6),
-    new(7,8),
+//ComplexF[] data = new ComplexF[]{
+//    new(1,2),
+//    new(3,4),
+//    new(5,6),
+//    new(7,8),
 
-    new(9,10),
-    new(11,12),
-    new(13,14),
-    new(15,16),
+//    new(9,10),
+//    new(11,12),
+//    new(13,14),
+//    new(15,16),
 
-    new(25, 26),
-    new(27, 28)};
+//    new(25, 26),
+//    new(27, 28)};
 
-var itl = MemoryMarshal.Cast<ComplexF, float>(data.AsSpan());
-var t = Vector256Helpers.LoadPartial(itl[16..]);
+//var itl = MemoryMarshal.Cast<ComplexF, float>(data.AsSpan());
+//var t = Vector256Helpers.LoadPartial(itl[16..]);
 
-var target = new float[2];
-Vector256Helpers.SavePartial(t,target);
+//var target = new float[2];
+//Vector256Helpers.SavePartial(t,target);
 
-Console.WriteLine($"{t}");
+//Console.WriteLine($"{t}");
 
 
 // lerp(a, b, t) = a + (b - a) * t  => lerp(a,b,t)=fma(t,b-a,a)
@@ -282,3 +307,25 @@ void Stabilize(ref ComplexF z)
     z.Imag *= k;
 }
 #endif
+
+[InlineArray(4)]
+public struct FixedComplexArray
+{
+    public ComplexF _element;
+}
+
+[StructLayout(LayoutKind.Explicit)]
+struct Vector256Complex
+{
+    [FieldOffset(0)]
+    public Vector256<float> vector;
+
+    [FieldOffset(0)]
+    public FixedComplexArray items;
+
+    public Vector256Complex()
+    {
+        this.vector = Vector256<float>.Zero;
+    }
+}
+

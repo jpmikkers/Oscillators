@@ -22,7 +22,7 @@ public class Benchmarks
     private ResonatorBankVectorized vectorizedBank;
     private ResonatorBankVectorizedAVX vectorizedAVXBank;
     private ResonatorBankVectorizedAVXBundled vectorizedAVXBankBundled;
-    private ResonatorBankVectorizedAVXBundled2 vectorizedAVXBankBundled2;
+    private ResonatorBankVectorizedAVXBundled3 vectorizedAVXBankBundled3;
 
     [GlobalSetup]
     public void Setup()
@@ -37,7 +37,7 @@ public class Benchmarks
         vectorizedBank = new ResonatorBankVectorized(Frequencies.MusicalPitchFrequencies(0, maxNote), 44100f, 4);
         vectorizedAVXBank = new ResonatorBankVectorizedAVX(Frequencies.MusicalPitchFrequencies(0, maxNote), 44100f, 4);
         vectorizedAVXBankBundled = new ResonatorBankVectorizedAVXBundled(Frequencies.MusicalPitchFrequencies(0, maxNote), 44100f, 4);
-        vectorizedAVXBankBundled2 = new ResonatorBankVectorizedAVXBundled2(Frequencies.MusicalPitchFrequencies(0, maxNote), 44100f, 4);
+        vectorizedAVXBankBundled3 = new ResonatorBankVectorizedAVXBundled3(Frequencies.MusicalPitchFrequencies(0, maxNote), 44100f, 4);
     }
 
     //[Benchmark(Baseline = true)]
@@ -79,11 +79,11 @@ public class Benchmarks
     }
 
     [Benchmark]
-    public void OscillatorBankVectorizedAVXBundled2()
+    public void OscillatorBankVectorizedAVXBundled3()
     {
         for (var i = 0; i < samples.Length; i++)
         {
-            vectorizedAVXBankBundled2.UpdateWithSample(samples[i]);
+            vectorizedAVXBankBundled3.UpdateWithSample(samples[i]);
         }
     }
 

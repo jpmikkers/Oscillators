@@ -19,13 +19,54 @@ public static class Vector256Helpers
 
         // 2 muls, 1 xor, 2 permutes and one hadd
         // var t1 = x * y * neg;                        // a0c0 -b0d0 ..
-        var t1 = Avx.Xor(x * y, vnegateOddMask);          // a0c0 -b0d0 ..
-        var t2 = Avx.Permute(x, 0b10_11_00_01) * y;      // b0c0  a0d0 ..
+        var t1 = Avx.Xor(Avx.Multiply(x,y), vnegateOddMask);          // a0c0 -b0d0 ..
+        var t2 = Avx.Multiply(Avx.Permute(x, 0b10_11_00_01), y);      // b0c0  a0d0 ..
         var t3 = Avx.HorizontalAdd(t1, t2);              // (a0c0-b0d0) (a1c1-b1d1) (b0c0+a0d0) (b1c1+a1d1) ..
         return Avx.Permute(t3, 0b11_01_10_00);           // (a0c0-b0d0) (b0c0+a0d0) (a1c1-b1d1) (b1c1+a1d1) 
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ComplexMulAlt(Vector256<float> x, Vector256<float> y)
+    {
+        // x = [a0, b0, a1, b1, ...]
+        // y = [c0, d0, c1, d1, ...]
+
+        // Duplicate real parts of y: [c0, c0, c1, c1, ...]
+        var yRealDup = Avx.Permute(y, 0b01_01_00_00);
+
+        // Duplicate imag parts of y: [d0, d0, d1, d1, ...]
+        var yImagDup = Avx.Permute(y, 0b11_11_10_10);
+
+        // ac / bc: [a0c0, b0c0, a1c1, b1c1, ...]
+        var ac_bc = Avx.Multiply(x, yRealDup);
+
+        // Swap real/imag of x: [b0, a0, b1, a1, ...]
+        var xSwapped = Avx.Permute(x, 0b10_11_00_01);
+
+        // bd / ad: [b0d0, a0d0, b1d1, a1d1, ...]
+        var bd_ad = Avx.Multiply(xSwapped, yImagDup);
+
+        // AddSubtract:
+        // even lanes: ac - bd  → real parts
+        // odd  lanes: bc + ad  → imag parts
+        return Avx.AddSubtract(ac_bc, bd_ad); // result = [real0, imag0, real1, imag1, ...]
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ComplexMulAlt2(Vector256<float> x, Vector256<float> y)
+    {
+        // Multiplication:  (a + bi)(c + di) = (ac -bd) + (bc + ad)i
+
+        // x = a0 b0 a1 b1 ,,,
+        // y = c0 d0 c1 d1 ,,,
+        var xy = Avx.Multiply(x, y);
+        var t0 = Avx.Permute(x, 0b10_11_00_01);                                 // b0 a0 b1 a1 ...
+        var t1 = Avx.AddSubtract(Vector256<float>.Zero, xy);                    // a0c0 -b0d0 ..
+        var t2 = Avx.Multiply(t0,y);                                            // b0c0  a0d0 ..
+        var t3 = Avx.HorizontalAdd(t1, t2);              // (a0c0-b0d0) (a1c1-b1d1) (b0c0+a0d0) (b1c1+a1d1) ..
+        return Avx.Permute(t3, 0b11_01_10_00);           // (a0c0-b0d0) (b0c0+a0d0) (a1c1-b1d1) (b1c1+a1d1) 
+    }
+
     public static Vector256<float> LoadPartial(ReadOnlySpan<float> span)
     {
         var v256Size = Vector256<float>.Count;
@@ -43,7 +84,6 @@ public static class Vector256Helpers
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SavePartial(Vector256<float> src, Span<float> span)
     {
         if (span.Length >= Vector256<float>.Count)
@@ -57,6 +97,16 @@ public static class Vector256Helpers
                 span[i] = src[i];
             }
         }
+    }
+
+    public static Vector256<float> LoadPartial(ReadOnlySpan<ComplexF> span)
+    {
+        return LoadPartial(MemoryMarshal.Cast<ComplexF,float>(span));
+    }
+
+    public static void SavePartial(Vector256<float> src, Span<ComplexF> span)
+    {
+        SavePartial(src, MemoryMarshal.Cast<ComplexF, float>(span));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
