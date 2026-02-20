@@ -131,7 +131,7 @@ public class ResonatorBankVectorizedAVXBundled3
             var smoothresonator = Vector256Helpers.Lerp(bundle.smoothresonator, resonator, bundle.beta);
 
             // advance phasor
-            bundle.phasor = Vector256Helpers.ComplexMulAlt2(phasor, bundle.rotator);
+            bundle.phasor = Vector256Helpers.ComplexMulAlt3(phasor, bundle.rotator);
 
             // store new resonator values
             bundle.resonator = resonator;

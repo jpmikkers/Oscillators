@@ -19,6 +19,7 @@ public class ComplexBenchmarks
     private float[] x;
     private float[] y;
     private float[] z;
+    private const int repeats = 100;
 
     [GlobalSetup]
     public void Setup()
@@ -28,7 +29,7 @@ public class ComplexBenchmarks
         z = new float[x.Length];
     }
 
-    //[Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true)]
     public void ComplexMulNormal()
     {
         int vc = Vector256<float>.Count;
@@ -36,55 +37,41 @@ public class ComplexBenchmarks
         ref var ry=ref MemoryMarshal.GetReference(y);
         ref var rz=ref MemoryMarshal.GetReference(z.AsSpan());
 
-        for (int i = 0; i <= (x.Length - vc); i += vc)
+        for (var r = 0; r < repeats; r++)
         {
-            Vector256.StoreUnsafe(
-                Vector256Helpers.ComplexMul(
-                    Vector256.LoadUnsafe(ref rx, (nuint)i),
-                    Vector256.LoadUnsafe(ref ry, (nuint)i)
-                ),
-                ref rz,
-                (nuint)i);
+            for (int i = 0; i <= (x.Length - vc); i += vc)
+            {
+                Vector256.StoreUnsafe(
+                    Vector256Helpers.ComplexMul(
+                        Vector256.LoadUnsafe(ref rx, (nuint)i),
+                        Vector256.LoadUnsafe(ref ry, (nuint)i)
+                    ),
+                    ref rz,
+                    (nuint)i);
+            }
         }
     }
 
-    //[Benchmark]
-    public void ComplexMulAlt()
+    [Benchmark]
+    public void ComplexMulAlt3()
     {
         int vc = Vector256<float>.Count;
         ref var rx = ref MemoryMarshal.GetReference(x);
         ref var ry = ref MemoryMarshal.GetReference(y);
         ref var rz = ref MemoryMarshal.GetReference(z.AsSpan());
 
-        for (int i = 0; i <= (x.Length - vc); i += vc)
+        for (var r = 0; r < repeats; r++)
         {
-            Vector256.StoreUnsafe(
-                Vector256Helpers.ComplexMulAlt(
-                    Vector256.LoadUnsafe(ref rx, (nuint)i),
-                    Vector256.LoadUnsafe(ref ry, (nuint)i)
-                ),
-                ref rz,
-                (nuint)i);
-        }
-    }
-
-    //[Benchmark]
-    public void ComplexMulAlt2()
-    {
-        int vc = Vector256<float>.Count;
-        ref var rx = ref MemoryMarshal.GetReference(x);
-        ref var ry = ref MemoryMarshal.GetReference(y);
-        ref var rz = ref MemoryMarshal.GetReference(z.AsSpan());
-
-        for (int i = 0; i <= (x.Length - vc); i += vc)
-        {
-            Vector256.StoreUnsafe(
-                Vector256Helpers.ComplexMulAlt2(
-                    Vector256.LoadUnsafe(ref rx, (nuint)i),
-                    Vector256.LoadUnsafe(ref ry, (nuint)i)
-                ),
-                ref rz,
-                (nuint)i);
+            for (var i = 0; i <= (x.Length - vc); i += vc)
+            {
+                Vector256.StoreUnsafe(
+                    Vector256Helpers.ComplexMulAlt3(
+                        Vector256.LoadUnsafe(ref rx, (nuint)i),
+                        Vector256.LoadUnsafe(ref ry, (nuint)i)
+                    ),
+                    ref rz,
+                    (nuint)i);
+            }
         }
     }
 }

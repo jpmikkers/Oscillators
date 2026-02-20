@@ -26,8 +26,8 @@ public class VectorTests
 
         foreach (var pair in resultNormal.Zip(resultVector))
         {
-            AreFloatsEqual(pair.First.Real, pair.First.Real);
-            AreFloatsEqual(pair.Second.Imag, pair.Second.Imag);
+            Assert.IsTrue(AreFloatsEqual(pair.First.Real, pair.Second.Real));
+            Assert.IsTrue(AreFloatsEqual(pair.First.Imag, pair.Second.Imag));
         }
     }
 
@@ -39,15 +39,9 @@ public class VectorTests
     }
 
     [TestMethod]
-    public void ComplexMulAlt()
+    public void ComplexMulAlt3()
     {
-        TestComplexMul(Vector256Helpers.ComplexMulAlt);
-    }
-
-    [TestMethod]
-    public void ComplexMulAlt2()
-    {
-        TestComplexMul(Vector256Helpers.ComplexMulAlt2);
+        TestComplexMul(Vector256Helpers.ComplexMulAlt3);
     }
 
     /// <summary>

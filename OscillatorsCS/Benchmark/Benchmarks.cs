@@ -68,7 +68,7 @@ public class Benchmarks
         }
     }
 
-    [Benchmark(Baseline = true)]
+    //[Benchmark(Baseline = true)]
     //[Benchmark]
     public void OscillatorBankVectorizedAVXBundled()
     {
@@ -78,7 +78,7 @@ public class Benchmarks
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void OscillatorBankVectorizedAVXBundled3()
     {
         for (var i = 0; i < samples.Length; i++)
