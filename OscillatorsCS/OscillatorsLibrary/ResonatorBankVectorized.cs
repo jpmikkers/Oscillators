@@ -2,8 +2,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Baksteen.Oscillators;
 
@@ -32,6 +30,22 @@ public class ResonatorBankVectorized
     private static float AlphaHeuristic(float frequency, float sampleRate, float k = 1.0f)
     {
         return 1.0f - MathF.Exp(-frequency / (sampleRate * k * MathF.Log10(1.0f + frequency)));
+    }
+
+    private static Vector<float> CreatePartial(ReadOnlySpan<float> span)
+    {
+        var vecCount = Vector<float>.Count;
+        if (span.Length >= vecCount)
+        {
+            return new Vector<float>(vecCount);
+        }
+        else
+        {
+            Span<float> temp = stackalloc float[vecCount];
+            temp.Clear();
+            span.CopyTo(temp);                            // copies only the tail
+            return new Vector<float>(temp);
+        }
     }
 
     public ResonatorBankVectorized(float[] frequencies, float sampleRate, int k)
@@ -100,7 +114,7 @@ public class ResonatorBankVectorized
         {
             var taildata = MemoryMarshal.Cast<ComplexF, float>(_phasors.AsSpan())[^remaining..];
 
-            var item = VectorExt.CreatePartial(taildata);
+            var item = CreatePartial(taildata);
             var squared = item * item;
             var swaptmp = Vector.AsVectorUInt64(squared);
             var reimswapped = ((swaptmp >> 32) | (swaptmp << 32)).As<ulong, float>();
