@@ -74,4 +74,50 @@ public class ComplexBenchmarks
             }
         }
     }
+
+    [Benchmark]
+    public void ComplexMulAlt4()
+    {
+        int vc = Vector256<float>.Count;
+        ref var rx = ref MemoryMarshal.GetReference(x);
+        ref var ry = ref MemoryMarshal.GetReference(y);
+        ref var rz = ref MemoryMarshal.GetReference(z.AsSpan());
+
+        for (var r = 0; r < repeats; r++)
+        {
+            for (var i = 0; i <= (x.Length - vc); i += vc)
+            {
+                Vector256.StoreUnsafe(
+                    Vector256Helpers.ComplexMulAlt4(
+                        Vector256.LoadUnsafe(ref rx, (nuint)i),
+                        Vector256.LoadUnsafe(ref ry, (nuint)i)
+                    ),
+                    ref rz,
+                    (nuint)i);
+            }
+        }
+    }
+
+    [Benchmark]
+    public void ComplexMulAlt5()
+    {
+        int vc = Vector256<float>.Count;
+        ref var rx = ref MemoryMarshal.GetReference(x);
+        ref var ry = ref MemoryMarshal.GetReference(y);
+        ref var rz = ref MemoryMarshal.GetReference(z.AsSpan());
+
+        for (var r = 0; r < repeats; r++)
+        {
+            for (var i = 0; i <= (x.Length - vc); i += vc)
+            {
+                Vector256.StoreUnsafe(
+                    Vector256Helpers.ComplexMulAlt5(
+                        Vector256.LoadUnsafe(ref rx, (nuint)i),
+                        Vector256.LoadUnsafe(ref ry, (nuint)i)
+                    ),
+                    ref rz,
+                    (nuint)i);
+            }
+        }
+    }
 }

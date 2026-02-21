@@ -65,6 +65,25 @@ public static class Vector256Helpers
         return Fma.MultiplyAddSubtract(aRe, b, aImbSwap);   // (a0r*b0r - a0i*b0i) (a0r*b0i + a0i*b0r) ...
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ComplexMulAlt4(Vector256<float> a, Vector256<float> b)
+    {
+        var bSwap = Avx.Permute(b, 0b10_11_00_01);          // b0i b0r b1i b1r ..
+        var aRe = Avx.DuplicateEvenIndexed(a);               // a0r a0r a1r a1r ..
+        var aIm = Avx.DuplicateOddIndexed(a);              // a0i a0i a1i a1i ..
+        var aImbSwap = Avx.Multiply(aIm, bSwap);            // a0i*b0i a0i*b0r a1i*b1i a1i*b1r ..
+        return Fma.MultiplyAddSubtract(aRe, b, aImbSwap);   // (a0r*b0r - a0i*b0i) (a0r*b0i + a0i*b0r) ...
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ComplexMulAlt5(Vector256<float> a, Vector256<float> b)
+    {
+        var aRe = Avx.DuplicateEvenIndexed(a);              // a0r a0r a1r a1r ..
+        var aIm = Avx.DuplicateOddIndexed(a);               // a0i a0i a1i a1i ..
+        var aImb = Avx.Multiply(aIm, b);                    // a0i*b0r a0i*b0i a1i*b1r a1i*b1i ..
+        return Fma.MultiplyAddSubtract(aRe, b, Avx.Permute(aImb, 0b10_11_00_01));   // (a0r*b0r - a0i*b0i) (a0r*b0i + a0i*b0r) ...
+    }
+
     public static Vector256<float> LoadPartial(ReadOnlySpan<float> span)
     {
         var v256Size = Vector256<float>.Count;

@@ -44,6 +44,18 @@ public class VectorTests
         TestComplexMul(Vector256Helpers.ComplexMulAlt3);
     }
 
+    [TestMethod]
+    public void ComplexMulAlt4()
+    {
+        TestComplexMul(Vector256Helpers.ComplexMulAlt4);
+    }
+
+    [TestMethod]
+    public void ComplexMulAlt5()
+    {
+        TestComplexMul(Vector256Helpers.ComplexMulAlt5);
+    }
+
     /// <summary>
     /// Helper method to compare two floats with tolerance.
     /// </summary>
