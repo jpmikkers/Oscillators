@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -83,6 +84,12 @@ public static class Vector256Helpers
         var aIm = Avx.DuplicateOddIndexed(a);               // a0i a0i a1i a1i ..
         var aImb = Avx.Multiply(aIm, b);                    // a0i*b0r a0i*b0i a1i*b1r a1i*b1i ..
         return Fma.MultiplyAddSubtract(aRe, b, Avx.Permute(aImb, 0b10_11_00_01));   // (a0r*b0r - a0i*b0i) (a0r*b0i + a0i*b0r) ...
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ComplexNormalizeFast(Vector256<float> a)
+    {
+        return Avx.Multiply(Avx2.ReciprocalSqrt(Vector256Helpers.MagnitudeSquaredDuplicated(a)),a);
     }
 
     public static Vector256<float> LoadPartial(ReadOnlySpan<float> span)

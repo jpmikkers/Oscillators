@@ -29,7 +29,7 @@ public class ComplexBenchmarks
         z = new float[x.Length];
     }
 
-    [Benchmark(Baseline = true)]
+    //[Benchmark(Baseline = true)]
     public void ComplexMulNormal()
     {
         int vc = Vector256<float>.Count;
@@ -52,7 +52,7 @@ public class ComplexBenchmarks
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void ComplexMulAlt3()
     {
         int vc = Vector256<float>.Count;
@@ -75,7 +75,7 @@ public class ComplexBenchmarks
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void ComplexMulAlt4()
     {
         int vc = Vector256<float>.Count;
@@ -98,7 +98,7 @@ public class ComplexBenchmarks
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void ComplexMulAlt5()
     {
         int vc = Vector256<float>.Count;

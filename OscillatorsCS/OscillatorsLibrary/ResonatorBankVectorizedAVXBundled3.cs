@@ -98,40 +98,18 @@ public class ResonatorBankVectorizedAVXBundled3
     }
 
 
-    private void StabilizeVectorizedAvx()
-    {
-        for (var i=0; i < _bundles.Length; i++)
-        {
-            ref var bundle = ref _bundles[i];
-
-            var phasor = bundle.phasor;
-
-            // Compute magnitude squared: (r*r + i*i) for each complex pair
-            var magsquared = Vector256Helpers.MagnitudeSquaredDuplicated(phasor);             // msq0 msq0 msq1 msq1 .. 
-
-            // Compute k = 0.5f * (3.0f - magsquared)
-            var k = Avx.Multiply(vhalf256, Avx.Subtract(vthree256, magsquared));
-
-            // Apply scaling: item = item * k
-            bundle.phasor = Avx.Multiply(phasor, k);
-        }
-    }
-
     public void UpdateWithSample(float sample)
     {
-        //resonator = Vector256.Lerp(resonator, phasorSample, bundle.alpha);
-        //smoothresonator = Vector256.Lerp(smoothresonator, resonator, bundle.beta);
+        var bs = _bundles.AsSpan();
 
-        for (var i=0; i < _bundles.Length; i++)
+        foreach (ref var bundle in bs)
         {
-            ref var bundle = ref _bundles[i];
-            
             var phasor = bundle.phasor;
             var resonator = Vector256Helpers.Lerp(bundle.resonator, phasor*sample, bundle.alpha);
             var smoothresonator = Vector256Helpers.Lerp(bundle.smoothresonator, resonator, bundle.beta);
 
             // advance phasor
-            bundle.phasor = Vector256Helpers.ComplexMulAlt3(phasor, bundle.rotator);
+            bundle.phasor = Vector256Helpers.ComplexMulAlt4(phasor, bundle.rotator);
 
             // store new resonator values
             bundle.resonator = resonator;
@@ -141,7 +119,10 @@ public class ResonatorBankVectorizedAVXBundled3
         if (updateCount++ >= 3)
         {
             updateCount = 0;
-            StabilizeVectorizedAvx();
+            foreach (ref var bundle in bs)
+            {
+                bundle.phasor = Vector256Helpers.ComplexNormalizeFast(bundle.phasor);
+            }
         }
     }
 

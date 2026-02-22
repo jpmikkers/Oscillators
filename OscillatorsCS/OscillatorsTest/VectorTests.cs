@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.InteropServices;
+using System.Collections;
 
 namespace OscillatorsTest;
 
@@ -12,6 +13,30 @@ namespace OscillatorsTest;
 public class VectorTests
 {
     private const float Tolerance = 1e-5f;
+
+    public sealed class FloatComparer(float tolerance) : IComparer<float>, IComparer
+    {
+        public int Compare(float x, float y)
+        {
+            if(Math.Abs(x - y) <= tolerance)
+            {
+                return 0;
+            }
+            else if (x < y)
+            {
+                return -1;
+            }
+            else
+            {
+                return 1;
+            }
+        }
+
+        public int Compare(object? x, object? y)
+        {
+            return Compare((float)x!, (float)y!);
+        }
+    }
 
     private void TestComplexMul(Func<Vector256<float>,Vector256<float>,Vector256<float>> func)
     {
@@ -54,6 +79,18 @@ public class VectorTests
     public void ComplexMulAlt5()
     {
         TestComplexMul(Vector256Helpers.ComplexMulAlt5);
+    }
+
+    [TestMethod]
+    public void TestNormalize()
+    {
+        ComplexF[] x = [new(1, 2), new(-3, 4), new(5, -6), new(-7, -8)];
+        ComplexF[] y = new ComplexF[x.Length];
+        var vx = Vector256Helpers.LoadPartial(x);
+        var result = Vector256Helpers.ComplexNormalizeFast(vx);
+        Vector256Helpers.SavePartial(result, y);
+        var expected = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+        CollectionAssert.AreEqual(expected, y.Select(t => t.Magnitude).ToList(), comparer: new FloatComparer(0.0002f));
     }
 
     /// <summary>
