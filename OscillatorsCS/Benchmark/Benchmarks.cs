@@ -34,47 +34,32 @@ public class Benchmarks
     [Benchmark(Baseline = true)]
     public void OscillatorBankNormal()
     {
-        for (var i = 0; i < samples.Length; i++)
-        {
-            normalBank.UpdateWithSample(samples[i]);
-        }
+        normalBank.UpdateWithSamples(samples);
     }
 
     //[Benchmark]
     public void OscillatorBankVectorized()
     {
-        for (var i = 0; i < samples.Length; i++)
-        {
-            vectorizedBank.UpdateWithSample(samples[i]);
-        }
+        vectorizedBank.UpdateWithSamples(samples);
     }
 
     //[Benchmark(Baseline = true)]
     //[Benchmark]
     public void OscillatorBankVectorizedAVX()
     {
-        for (var i = 0; i < samples.Length; i++)
-        {
-            vectorizedAVXBank.UpdateWithSample(samples[i]);
-        }
+        vectorizedAVXBank.UpdateWithSamples(samples);
     }
 
     //[Benchmark(Baseline = true)]
     //[Benchmark]
     public void OscillatorBankVectorizedAVXBundled()
     {
-        for (var i = 0; i < samples.Length; i++)
-        {
-            vectorizedAVXBankBundled.UpdateWithSample(samples[i]);
-        }
+        vectorizedAVXBankBundled.UpdateWithSamples(samples);
     }
 
     [Benchmark]
     public void OscillatorBankVectorizedAVXBundled3()
     {
-        for (var i = 0; i < samples.Length; i++)
-        {
-            vectorizedAVXBankBundled3.UpdateWithSample(samples[i]);
-        }
+        vectorizedAVXBankBundled3.UpdateWithSamples(samples);
     }
 }

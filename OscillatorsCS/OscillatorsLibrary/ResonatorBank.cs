@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Baksteen.Oscillators;
 
-public class ResonatorBank
+public class ResonatorBank : IResonatorBank
 {
     private readonly float _sampleRate;
     private readonly ComplexF[] _phasors;
@@ -17,6 +17,8 @@ public class ResonatorBank
     private int updateCount = 0;
 
     public ComplexF[] SmoothResonators => _smoothResonators;
+
+    ReadOnlyMemory<ComplexF> IResonatorBank.SmoothResonators => SmoothResonators;
 
     /// <summary>
     /// Computes the alpha heuristic for smoothing factor based on frequency and sample rate.
@@ -70,7 +72,7 @@ public class ResonatorBank
         }
     }
 
-    public void UpdateWithSample(float sample)
+    private void UpdateWithSample(float sample)
     {
         for (int i = 0; i < _resonators.Length; i++)
         {
@@ -92,6 +94,14 @@ public class ResonatorBank
         {
             updateCount = 0;
             Stabilize(); // this is overkill but necessary
+        }
+    }
+
+    public void UpdateWithSamples(ReadOnlySpan<float> samples)
+    {
+        foreach (var sample in samples)
+        {
+            UpdateWithSample(sample);
         }
     }
 }

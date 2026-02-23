@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Baksteen.Oscillators;
 
-public class ResonatorBankVectorizedAVX
+public class ResonatorBankVectorizedAVX : IResonatorBank
 {
     private readonly float _sampleRate;
     private readonly ComplexF[] _phasors;
@@ -22,6 +22,8 @@ public class ResonatorBankVectorizedAVX
 
     // o/` no need to ask, he's a..
     public ComplexF[] SmoothResonators => _smoothResonators;
+
+    ReadOnlyMemory<ComplexF> IResonatorBank.SmoothResonators => SmoothResonators;
 
     /// <summary>
     /// Computes the alpha heuristic for smoothing factor based on frequency and sample rate.
@@ -160,7 +162,7 @@ public class ResonatorBankVectorizedAVX
         }
     }
 
-    public void UpdateWithSample(float sample)
+    private void UpdateWithSample(float sample)
     {
         var fphasors = MemoryMarshal.Cast<ComplexF, float>(_phasors.AsSpan());
         var fresonators = MemoryMarshal.Cast<ComplexF, float>(_resonators.AsSpan());
@@ -239,6 +241,14 @@ public class ResonatorBankVectorizedAVX
         {
             updateCount = 0;
             StabilizeVectorizedAvx(_phasors);
+        }
+    }
+
+    public void UpdateWithSamples(ReadOnlySpan<float> samples)
+    {
+        foreach (var sample in samples)
+        {
+            UpdateWithSample(sample);
         }
     }
 }

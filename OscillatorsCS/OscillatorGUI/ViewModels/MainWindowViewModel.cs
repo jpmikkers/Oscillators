@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -54,7 +55,7 @@ public partial class MainWindowViewModel : ViewModelBase
         set;
     } = null;
 
-    public Action<float[]> AddSpectrogramLine = x => { };
+    public Action<ReadOnlySpan<float>> AddSpectrogramLine = x => { };
 
     partial void OnStartNoteChanged(int value)
     {
@@ -97,7 +98,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private WaveRecorder? waveRecorder;
     private Task? waveRecorderTask;
     private CancellationTokenSource waveRecorderCancellationTokenSource = new();
-    private ResonatorBankVectorizedAVXBundled? resonatorBank;
+    private IResonatorBank? resonatorBank;
 
     private void UpdateResonatorBank()
     {
@@ -109,6 +110,40 @@ public partial class MainWindowViewModel : ViewModelBase
     private float DbToLinear(float dB)
     {
         return MathF.Exp((MathF.Log(10.0f) / 20.0f) * dB);
+    }
+
+    private float[]? _mixBuffer;
+
+    private ConcurrentQueue<Memory<float>> _spectrumFreed = new();
+    private ConcurrentQueue<Memory<float>> _spectrumHistory = new();
+
+    private Memory<float> GetSpectrumLine(IResonatorBank resonatorBank)
+    {
+        var resonators = resonatorBank.SmoothResonators;
+
+        Memory<float> spectrumLine;
+
+        do
+        {
+            if (!_spectrumFreed.TryDequeue(out spectrumLine))
+            {
+                break;
+            }
+        } while(spectrumLine.Length != resonators.Length);
+
+        if(spectrumLine.Length != resonators.Length)
+        {
+            spectrumLine = new float[resonators.Length];
+        }
+
+        var spectrumLineSpan = spectrumLine.Span;
+
+        for (var i = 0; i < resonators.Length; i++)
+        {
+            spectrumLineSpan[i] = resonators.Span[i].Magnitude;
+        }
+
+        return spectrumLine;
     }
 
     [RelayCommand]
@@ -135,31 +170,31 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (resonatorBank is not null)
             {
-                var multiplier = DbToLinear(BoostDecibels) / 32768f;
-
-                for (int i = 0; i < buffer.Length; i++)
+                // allocate or resize the mix buffer if needed
+                if (_mixBuffer == null || _mixBuffer.Length < buffer.Length)
                 {
-                    resonatorBank.UpdateWithSample(Math.Clamp(buffer.Span[i].Mono * multiplier,-1f,1f));
+                    _mixBuffer = new float[buffer.Length];
                 }
 
-                var spectrumline = resonatorBank.SmoothResonators.Select(x => x.Magnitude).ToArray();
-                AddSpectrogramLine(spectrumline);
-            }
-        };
-
-        waveRecorder.Stereo16Process = (buffer) =>
-        {
-            if (resonatorBank is not null)
-            {
+                var mixSpan = _mixBuffer.AsSpan(0, buffer.Length);
                 var multiplier = DbToLinear(BoostDecibels) / 32768f;
 
-                for (int i = 0; i < buffer.Length; i++)
+                for (var i = 0; i < buffer.Length; i++)
                 {
-                    resonatorBank.UpdateWithSample(Math.Clamp(buffer.Span[i].Left * multiplier, -1f, 1f));
+                    mixSpan[i] = Math.Clamp( buffer.Span[i].Mono * multiplier, -1f, 1f);
                 }
 
-                var spectrumline = resonatorBank.SmoothResonators.Select(x => x.Magnitude).ToArray();
-                AddSpectrogramLine(spectrumline);
+                resonatorBank.UpdateWithSamples(_mixBuffer.AsSpan(0, buffer.Length));
+                _spectrumHistory.Enqueue(GetSpectrumLine(resonatorBank));
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    while (_spectrumHistory.TryDequeue(out var spectrumLine))
+                    {
+                        AddSpectrogramLine(spectrumLine.Span);
+                        _spectrumFreed.Enqueue(spectrumLine);
+                    }
+                });
             }
         };
 

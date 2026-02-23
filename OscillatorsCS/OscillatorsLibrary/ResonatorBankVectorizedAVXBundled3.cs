@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Baksteen.Oscillators;
 
-public class ResonatorBankVectorizedAVXBundled3
+public class ResonatorBankVectorizedAVXBundled3 : IResonatorBank
 {
     private struct Bundle
     {
@@ -41,6 +41,8 @@ public class ResonatorBankVectorizedAVXBundled3
             return _smoothResonators;    // TODO!!!
         }
     }
+
+    ReadOnlyMemory<ComplexF> IResonatorBank.SmoothResonators => SmoothResonators;
 
     /// <summary>
     /// Computes the alpha heuristic for smoothing factor based on frequency and sample rate.
@@ -97,8 +99,7 @@ public class ResonatorBankVectorizedAVXBundled3
         }
     }
 
-
-    public void UpdateWithSample(float sample)
+    private void UpdateWithSample(float sample)
     {
         var bs = _bundles.AsSpan();
 
@@ -142,6 +143,14 @@ public class ResonatorBankVectorizedAVXBundled3
         if (i < _numChannels)
         {
             Vector256Helpers.SavePartial(_bundles[bi].smoothresonator, fsmoothresonators[(i*2)..]);
+        }
+    }
+
+    public void UpdateWithSamples(ReadOnlySpan<float> samples)
+    {
+        foreach (var sample in samples)
+        {
+            UpdateWithSample(sample);
         }
     }
 }

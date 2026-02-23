@@ -163,8 +163,13 @@ public partial class SpectrogramPlot : Control
 
     private bool _pendingRender = false;
 
-    public void AddData(float[] data)
+    public void AddData(ReadOnlySpan<float> data)
     {
+        if (data.Length > NumBands)
+        {
+            data = data[..NumBands];
+        }
+
         if (_freedHistory.TryDequeue(out var freebuf)) 
         {
             if(freebuf.Length != NumBands)
@@ -177,9 +182,8 @@ public partial class SpectrogramPlot : Control
             freebuf = new float[NumBands];
         }
 
-        Array.Copy(data, freebuf, Math.Min(data.Length, NumBands));
-
-        _dataHistory.Add(data);
+        data.CopyTo(freebuf);
+        _dataHistory.Add(freebuf);
 
         while (_dataHistory.Count > NumHistory)
         {

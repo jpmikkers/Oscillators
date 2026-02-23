@@ -18,16 +18,9 @@ public partial class MainWindow : Window
 
         if (DataContext is ViewModels.MainWindowViewModel vm)
         {
-            vm.AddSpectrogramLine = line =>
-            {
-                Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    SpectrogramPlot.AddData(line);
-                });
-            };
+            vm.AddSpectrogramLine = line => SpectrogramPlot.AddData(line);
         }
     }
-
 
     protected override void OnInitialized()
     {
