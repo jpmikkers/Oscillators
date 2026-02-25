@@ -171,7 +171,7 @@ public class WaveRecorder
                     cbSize = (ushort)(Marshal.SizeOf<WAVEFORMATEXTENSIBLE>() - Marshal.SizeOf<WAVEFORMATEX>())
                 },
                 Samples = new SamplesUnion { wValidBitsPerSample = (ushort)sampleFormat },
-                dwChannelMask = (uint)(ChannelFlags.SPEAKER_FRONT_LEFT | ChannelFlags.SPEAKER_FRONT_RIGHT),
+                dwChannelMask = 0,
                 SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             };
         }
