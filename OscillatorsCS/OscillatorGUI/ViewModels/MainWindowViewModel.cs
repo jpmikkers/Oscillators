@@ -24,19 +24,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly BoostedFloatConverter _boostedFloatConverter = new();
 
     [ObservableProperty]
-    public partial int StartNote { get; set; } = 12;
+    public partial int StartNote { get; set; } = 0;
 
     [ObservableProperty]
-    public partial int EndNote { get; set; } = 12+(3*12);
+    public partial int EndNote { get; set; } = 127;
 
     [ObservableProperty]
-    public partial string StartNoteAsString { get; set; } = GetNoteName(12);
+    public partial string StartNoteAsString { get; set; } = GetNoteName(0);
 
     [ObservableProperty]
-    public partial string EndNoteAsString { get; set; } = GetNoteName(12+(3*12));
+    public partial string EndNoteAsString { get; set; } = GetNoteName(127);
 
     [ObservableProperty]
-    public partial int NumBands { get; set; } = 3*12+1;
+    public partial int NumBands { get; set; } = 127+1;
 
     [ObservableProperty]
     public partial int NumHistory { get; set; } = 100;

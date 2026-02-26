@@ -7,7 +7,7 @@
     xmlns:oscillatorgui="using:OscillatorGUI"
     xmlns:vm="using:OscillatorGUI.ViewModels"
     Title="OscillatorGUI"
-    d:DesignHeight="450"
+    d:DesignHeight="550"
     d:DesignWidth="800"
     x:DataType="vm:MainWindowViewModel"
     Icon="/Assets/avalonia-logo.ico"
@@ -21,86 +21,231 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <DockPanel>
-        <Border
-            Margin="2"
-            Padding="0"
-            BorderBrush="Gray"
-            BorderThickness="2"
-            DockPanel.Dock="Top">
-            <StackPanel Orientation="Horizontal">
-                <StackPanel
+    <!--    <Window.Resources>
+        <GridLength x:Key="SliderPreContentMargin">5</GridLength>
+        <GridLength x:Key="SliderPostContentMargin">5</GridLength>
+    </Window.Resources>-->
+    <Window.Styles>
+
+        <Style Selector="ToggleButton TextBlock.expanded">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="ToggleButton TextBlock.collapsed">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="ToggleButton:checked TextBlock.expanded">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="ToggleButton:checked TextBlock.collapsed">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="Slider">
+            <Style.Resources>
+                <GridLength x:Key="SliderPreContentMargin">5</GridLength>
+                <GridLength x:Key="SliderPostContentMargin">5</GridLength>
+            </Style.Resources>
+        </Style>
+
+        <!--
+            Source - https://stackoverflow.com/a/78983914
+            Posted by Tarazed, modified by community. See post 'Timeline' for change history
+            Retrieved 2026-02-26, License - CC BY-SA 4.0
+        -->
+
+        <!--        <Style Selector="Slider:horizontal">
+
+            <Style Selector="^ Grid#HorizontalTemplate">
+                <Setter Property="Background" Value="Black" />
+            </Style>
+
+            <Style Selector="^ Track">
+                <Style Selector="^ RepeatButton Border">
+                    <Setter Property="CornerRadius" Value="0" />
+                    <Setter Property="Height" Value="6" />
+                </Style>
+
+                <Style Selector="^ Thumb">
+                    <Setter Property="Height" Value="18" />
+                    <Setter Property="Width" Value="18" />
+                    <Setter Property="BorderBrush" Value="Crimson" />
+                    <Setter Property="BorderThickness" Value="3" />
+                    <Setter Property="Background" Value="Green" />
+                </Style>
+            </Style>
+
+        </Style>-->
+    </Window.Styles>
+
+    <SplitView
+        Name="TheSplitView"
+        CompactPaneLength="46"
+        DisplayMode="CompactInline"
+        IsPaneOpen="True"
+        OpenPaneLength="350">
+        <SplitView.Pane>
+            <DockPanel LastChildFill="True">
+                <ToggleButton
                     Margin="4"
-                    Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
-                        <Slider
-                            Width="200"
-                            Maximum="100"
-                            Minimum="0"
-                            Value="{Binding StartNote, Mode=TwoWay}" />
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    DockPanel.Dock="Top"
+                    IsChecked="{Binding #TheSplitView.IsPaneOpen}">
+                    <Panel>
                         <TextBlock
                             Margin="4"
-                            Text="{Binding StartNoteAsString, Mode=OneWay}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                    <Slider
-                        Width="200"
-                        Maximum="127"
-                        Minimum="0"
-                        Value="{Binding EndNote, Mode=TwoWay}" />
+                            Classes="expanded"
+                            Text="&lt;" />
                         <TextBlock
                             Margin="4"
-                            Text="{Binding EndNoteAsString, Mode=OneWay}" />
+                            Classes="collapsed"
+                            Text="&gt;" />
+                    </Panel>
+                </ToggleButton>
+
+                <ScrollViewer
+                    Padding="20,10,20,10"
+                    IsVisible="{Binding #TheSplitView.IsPaneOpen}"
+                    VerticalScrollBarVisibility="Visible">
+                    <StackPanel ClipToBounds="True" Spacing="20">
+
+                        <StackPanel>
+                            <Label Content="Start frequency band" />
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    Maximum="127"
+                                    Minimum="0"
+                                    Value="{Binding StartNote, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding StartNoteAsString, Mode=OneWay}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <Label Content="End frequency band" />
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    Maximum="127"
+                                    Minimum="0"
+                                    Value="{Binding EndNote, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding EndNoteAsString, Mode=OneWay}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <Label Content="Signal boost (dB)" />
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    Maximum="72.0"
+                                    Minimum="0.0"
+                                    Value="{Binding BoostDecibels, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding BoostDecibels, Mode=OneWay, StringFormat='{}{0:0.00} dB'}" />
+                            </Grid>
+
+                        </StackPanel>
+
+                        <StackPanel>
+                            <Label Content="Visible history window (# of snapshots)" />
+
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    Maximum="1000"
+                                    Minimum="8"
+                                    Value="{Binding NumHistory, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding NumHistory, Mode=OneWay}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <Label Content="Histogram minimum (RMS)" />
+
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    LargeChange="0.1"
+                                    Maximum="0.25"
+                                    Minimum="0"
+                                    SmallChange="0.01"
+                                    Value="{Binding ScaleMinValue, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding ScaleMinValue, Mode=OneWay, StringFormat='{}{0:0.00}'}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <Label Content="Histogram maximum (RMS)" />
+
+                            <Grid ColumnDefinitions="*,64">
+                                <Slider
+                                    Grid.Column="0"
+                                    LargeChange="0.1"
+                                    Maximum="1.0"
+                                    Minimum="0"
+                                    SmallChange="0.01"
+                                    Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding ScaleMaxValue, Mode=OneWay, StringFormat='{}{0:0.00}'}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <ComboBox
+                            MaxWidth="310"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding Devices}"
+                            SelectedValue="{Binding SelectedDevice}" />
+                        <Button Command="{Binding StartSamplingCommand}">Start</Button>
+                        <Button Command="{Binding StopSamplingCommand}">Stop</Button>
                     </StackPanel>
-                </StackPanel>
-                <Slider
-                    Width="200"
-                    Maximum="1000"
-                    Minimum="8"
-                    Value="{Binding NumHistory, Mode=TwoWay}" />
-                <TextBlock
-                    Margin="4"
-                    Text="{Binding NumHistory, Mode=OneWay}" />
 
-                <StackPanel Orientation="Vertical">
-                    <Slider
-                        Width="200"
-                        Maximum="0.25"
-                        Minimum="0"
-                        SmallChange="0.01"
-                        LargeChange="0.1"
-                        Value="{Binding ScaleMinValue, Mode=TwoWay}" />
-                    <Slider
-                        Width="200"
-                        Maximum="0.6"
-                        Minimum="0"
-                        SmallChange="0.01"
-                        LargeChange="0.1"
-                        Value="{Binding ScaleMaxValue, Mode=TwoWay}" />
-                </StackPanel>
+                </ScrollViewer>
 
-                <Slider 
-                    Orientation="Vertical"
-                    Minimum="0.0"
-                    Maximum="72.0"
-                    Value="{Binding BoostDecibels, Mode=TwoWay}">
-                 </Slider>
-            </StackPanel>
-        </Border>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-            <ComboBox ItemsSource="{Binding Devices}" SelectedValue="{Binding SelectedDevice}"  ></ComboBox>
-            <Button Command="{Binding StartSamplingCommand}">Start</Button>			
-            <Button Command="{Binding StopSamplingCommand}">Stop</Button>			
-        </StackPanel>
-        <Border Margin="2">
-            <oscillatorgui:SpectrogramPlot
-            Name="SpectrogramPlot"
-            NumBands="{Binding NumBands, Mode=OneWay}" 
-            NumHistory="{Binding NumHistory, Mode=OneWay}"
-            ScaleMinValue="{Binding ScaleMinValue, Mode=OneWay}"
-            ScaleMaxValue="{Binding ScaleMaxValue, Mode=OneWay}"
-            />
-        </Border>
-    </DockPanel>
+            </DockPanel>
+        </SplitView.Pane>
+        <DockPanel>
+            <Border
+                Margin="2"
+                Padding="0"
+                BorderBrush="Gray"
+                BorderThickness="2"
+                DockPanel.Dock="Top" />
+            <Border Margin="2">
+                <oscillatorgui:SpectrogramPlot
+                    Name="SpectrogramPlot"
+                    NumBands="{Binding NumBands, Mode=OneWay}"
+                    NumHistory="{Binding NumHistory, Mode=OneWay}"
+                    ScaleMaxValue="{Binding ScaleMaxValue, Mode=OneWay}"
+                    ScaleMinValue="{Binding ScaleMinValue, Mode=OneWay}" />
+            </Border>
+        </DockPanel>
+    </SplitView>
+
 
 </Window>
