@@ -107,10 +107,11 @@
                 </ToggleButton>
 
                 <ScrollViewer
-                    Padding="20,10,20,10"
                     IsVisible="{Binding #TheSplitView.IsPaneOpen}"
                     VerticalScrollBarVisibility="Visible">
-                    <StackPanel ClipToBounds="True" Spacing="20">
+                    <StackPanel
+                        Margin="30,20,30,20"
+                        ClipToBounds="True" Spacing="20">
 
                         <StackPanel>
                             <Label Content="Start frequency band" />
@@ -220,9 +221,18 @@
                             MaxWidth="310"
                             HorizontalAlignment="Stretch"
                             ItemsSource="{Binding Devices}"
-                            SelectedValue="{Binding SelectedDevice}" />
-                        <Button Command="{Binding StartSamplingCommand}">Start</Button>
-                        <Button Command="{Binding StopSamplingCommand}">Stop</Button>
+                            SelectedValue="{Binding SelectedDevice}"
+                            DisplayMemberBinding="{Binding Name}"
+                            />
+
+                        <StackPanel
+                            HorizontalAlignment="Left"
+                            Orientation="Horizontal"
+                            Spacing="10">
+
+                            <Button Command="{Binding StartSamplingCommand}" IsEnabled="{Binding !IsCapturing}">Start</Button>
+                            <Button Command="{Binding StopSamplingCommand}" IsEnabled="{Binding IsCapturing}">Stop</Button>
+                        </StackPanel>
                     </StackPanel>
 
                 </ScrollViewer>

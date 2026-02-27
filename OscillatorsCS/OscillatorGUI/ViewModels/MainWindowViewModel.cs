@@ -9,6 +9,7 @@ using Baksteen.Oscillators;
 using Baksteen.Waves;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OscillatorsLibrary;
 
 namespace OscillatorGUI.ViewModels;
 
@@ -16,12 +17,18 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private WaveRecorder? waveRecorder;
     private Task? waveRecorderTask;
+    private Task? sampleProcessingTask;
     private CancellationTokenSource waveRecorderCancellationTokenSource = new();
-    private IResonatorBank? resonatorBank;
-    private int _spectrumLineSamplesCount;
-    private ConcurrentQueue<Memory<float>> _spectrumFreed = new();
-    private ConcurrentQueue<Memory<float>> _spectrumHistory = new();
+    private IResonatorBank resonatorBank = default!;
+    private int _samplesPerSpectrogramLine;
+    private int _spectrogramSampleCounter;
+    private readonly ConcurrentQueue<Memory<float>> _spectrumFreed = new();
+    private readonly ConcurrentQueue<Memory<float>> _spectrumHistory = new();
     private readonly BoostedFloatConverter _boostedFloatConverter = new();
+
+    private SpanRing<float> _sampleRing = new(0);
+    private long _sampleOverflowCount;
+    private SemaphoreSlim _sampleRingLock = new(0);
 
     [ObservableProperty]
     public partial int StartNote { get; set; } = 0;
@@ -63,6 +70,14 @@ public partial class MainWindowViewModel : ViewModelBase
         get;
         set;
     } = null;
+
+
+    [ObservableProperty]
+    public partial bool IsCapturing
+    {
+        get;
+        set;
+    } = false;
 
     public Action<ReadOnlySpan<float>> AddSpectrogramLine = x => { };
 
@@ -111,7 +126,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void UpdateResonatorBank()
     {
-        resonatorBank = new ResonatorBankVectorizedAVXBundled(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 1);
+        resonatorBank = new ResonatorBankVectorizedAVXBundled3(Frequencies.MusicalPitchFrequencies(StartNote, EndNote), 44100, 1);
     }
 
     private Memory<float> GetSpectrumLine(IResonatorBank resonatorBank)
@@ -147,78 +162,93 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task StartSampling()
     {
         UpdateResonatorBank();
-        //var dispatcherTimer = new DispatcherTimer();
-        //dispatcherTimer.Interval = TimeSpan.FromSeconds(1 / 60.0);
-        //dispatcherTimer.Tick += (sender, e) => {
-
-        //    for (int i = 0; i < (44100 / 60); i++)
-        //    {
-        //        resonatorBank.UpdateWithSample(2.0f * (Random.Shared.NextSingle() - 0.5f));
-        //    }
-
-        //    var spectrumline = resonatorBank.SmoothResonators.Select(x => x.Magnitude).ToArray();
-        //    AddSpectrogramLine(spectrumline);
-        //};
-        //dispatcherTimer.Start();
 
         var sampleRate = 44100;
         var driverBufferDuration = TimeSpan.FromMilliseconds(25);
         var driverBufferSize = (int)(sampleRate * driverBufferDuration.TotalSeconds);
-        var spectrogramLineDuration = TimeSpan.FromMilliseconds(5);
-        var spectrogramLineSamples = (int)(sampleRate * spectrogramLineDuration.TotalSeconds);
-        _spectrumLineSamplesCount = 0;
+        var spectrogramLineDuration = TimeSpan.FromMilliseconds(10);
+        _samplesPerSpectrogramLine = (int)(sampleRate * spectrogramLineDuration.TotalSeconds);
+        _spectrogramSampleCounter = 0;
 
-        waveRecorder = new WaveRecorder(sampleRate, SampleFormat.Fmt16, SampleChannels.Mono, driverBufferDuration, 4);
+        waveRecorder = new WaveRecorder(sampleRate, SampleFormat.Fmt16, SampleChannels.Mono, driverBufferDuration, 6);
         _boostedFloatConverter.BoostDecibels = BoostDecibels;
         _boostedFloatConverter.Attach(waveRecorder);
+        _sampleRing = new SpanRing<float>(sampleRate);      // 1 seconds of audio should be more than enough to avoid overflow 
+        _sampleOverflowCount = 0;
+        _sampleRingLock = new SemaphoreSlim(0);
 
         _boostedFloatConverter.ProcessedSamplesCallback = (buffer) =>
         {
-            if (resonatorBank is not null)
-            {
-                var p = 0;
-                var samplesToProcess = Math.Min(spectrogramLineSamples - _spectrumLineSamplesCount, buffer.Length);
-                var addedNewLines = false;
-                while (samplesToProcess > 0)
-                {
-                    resonatorBank.UpdateWithSamples(buffer.Slice(p, samplesToProcess));
-                    _spectrumLineSamplesCount += samplesToProcess;
-                    p+= samplesToProcess;
-
-                    if (_spectrumLineSamplesCount >= spectrogramLineSamples)
-                    {
-                        _spectrumHistory.Enqueue(GetSpectrumLine(resonatorBank));
-                        _spectrumLineSamplesCount = 0;
-                        addedNewLines = true;
-                    }
-
-                    samplesToProcess = Math.Min(spectrogramLineSamples - _spectrumLineSamplesCount, buffer.Length - p);
-                }
-
-                if (addedNewLines)
-                {
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        while (_spectrumHistory.TryDequeue(out var spectrumLine))
-                        {
-                            AddSpectrogramLine(spectrumLine.Span);
-                            _spectrumFreed.Enqueue(spectrumLine);
-                        }
-                    });
-                }
-            }
+            _sampleRing.LossyWriteAll(buffer, out var lost);
+            _sampleOverflowCount+=lost;
+            _sampleRingLock.Release();
         };
 
+        waveRecorderCancellationTokenSource = new CancellationTokenSource();
+        sampleProcessingTask = SampleProcessingTask(waveRecorderCancellationTokenSource.Token);
         waveRecorderTask = waveRecorder.Main(waveRecorderCancellationTokenSource.Token);
+        IsCapturing = true;
     }
+
+    private async Task SampleProcessingTask(CancellationToken cts)
+    {
+        try
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                await _sampleRingLock.WaitAsync(cts).ConfigureAwait(false);
+
+                var done = false;
+
+                while (!done)
+                {
+                    var readBufferSpan = _sampleRing.GetReadSpan(_samplesPerSpectrogramLine - _spectrogramSampleCounter);
+
+                    if (readBufferSpan.Length > 0)
+                    {
+                        resonatorBank.UpdateWithSamples(readBufferSpan);
+                        _sampleRing.AdvanceRead(readBufferSpan.Length);
+
+                        _spectrogramSampleCounter += readBufferSpan.Length;
+
+                        if (_spectrogramSampleCounter >= _samplesPerSpectrogramLine)
+                        {
+                            _spectrogramSampleCounter -= _samplesPerSpectrogramLine;
+                            _spectrumHistory.Enqueue(GetSpectrumLine(resonatorBank));
+
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                while (_spectrumHistory.TryDequeue(out var spectrumLine))
+                                {
+                                    AddSpectrogramLine(spectrumLine.Span);
+                                    _spectrumFreed.Enqueue(spectrumLine);
+                                }
+                            });
+                        }
+                    }
+                    else
+                    {
+                        done = true;
+                    }
+                }
+            }
+        }
+        catch(OperationCanceledException)
+        {
+            // Expected when cancellation is requested, do nothing.
+        }
+    }
+
 
     [RelayCommand]
     public async Task StopSampling()
     {
         if (waveRecorder is not null)
         {
+            IsCapturing = false;
             waveRecorderCancellationTokenSource.Cancel();
             await waveRecorderTask!;
+            await sampleProcessingTask!;
             //waveRecorder.Dispose();
             waveRecorder = null;
         }
