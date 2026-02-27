@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Pipelines;
 using System.Reflection;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
@@ -7,9 +8,8 @@ using System.Text;
 namespace Baksteen.Oscillators;
 
 /// <summary>
-/// A (ring)buffer similar to a Pipeline except it is typed and it can always present a contiguous span for reading and writing.
-/// It is designed for a single producer and a single consumer, but it is thread safe in that the producer and consumer can be 
-/// on different threads.
+/// A (ring)buffer similar to a Pipeline except it is typed. It is designed for a single producer and a single consumer, but it 
+/// is thread safe in that the producer and consumer can be on different threads.
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public sealed class SpanRing<T>
@@ -52,9 +52,12 @@ public sealed class SpanRing<T>
     {
         lock (_lock)
         {
+            if(written < 0 || written > _buffer.Length - _filled || _writePos + written > _buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(written));
+            }
             _writePos = (_writePos + written) % _buffer.Length;
             _filled += written;
-            if(_filled > _buffer.Length) throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -80,9 +83,12 @@ public sealed class SpanRing<T>
     {
         lock (_lock)
         {
+            if(read < 0 || read > _filled || _readPos + read > _buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(read));
+            }
             _readPos = (_readPos + read) % _buffer.Length;
             _filled -= read;
-            if (_filled < 0) throw new ArgumentOutOfRangeException();
         }
     }
 }
