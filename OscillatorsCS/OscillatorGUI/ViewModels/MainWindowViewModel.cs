@@ -161,6 +161,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public async Task StartSampling()
     {
+        if(SelectedDevice is null)
+        {
+            return;
+        }
+
         UpdateResonatorBank();
 
         var sampleRate = 44100;
@@ -170,7 +175,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _samplesPerSpectrogramLine = (int)(sampleRate * spectrogramLineDuration.TotalSeconds);
         _spectrogramSampleCounter = 0;
 
-        waveRecorder = new WaveRecorder(sampleRate, SampleFormat.Fmt16, SampleChannels.Mono, driverBufferDuration, 6);
+        waveRecorder = new WaveRecorder(SelectedDevice.Id, sampleRate, SampleFormat.Fmt16, SampleChannels.Mono, driverBufferDuration, 6);
         _boostedFloatConverter.BoostDecibels = BoostDecibels;
         _boostedFloatConverter.Attach(waveRecorder);
         _sampleRing = new SpanRing<float>(sampleRate);      // 1 seconds of audio should be more than enough to avoid overflow 

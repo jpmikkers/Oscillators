@@ -8,7 +8,16 @@ using msgTuple = (Baksteen.Waves.MMInterop.MMMessage msg, IntPtr dwInstance, Int
 
 public class WavePlayer
 {
+    public record class PlayerInfo
+    {
+        public uint Id
+        {
+            get; set;
+        }
+        public string Name { get; set; } = string.Empty;
+    }
 
+    private readonly uint deviceId;
     private readonly Channel<msgTuple> _channel = Channel.CreateUnbounded<msgTuple>();
     private readonly Queue<BufferBase> _freeBuffers = new();
     private readonly List<BufferBase> _activeBuffers = new();
@@ -99,8 +108,33 @@ public class WavePlayer
         await Task.CompletedTask;
     }
 
-    public WavePlayer(int sampleRate, SampleFormat sampleFormat, SampleChannels sampleChannels, TimeSpan timePerBuffer, int numBuffers)
+    public static List<PlayerInfo> Probe()
     {
+        var result = new List<PlayerInfo>();
+        var numDevs = waveOutGetNumDevs();
+        for (uint t = 0; t < numDevs; t++)
+        {
+            var deviceID = t;
+            var caps = new WAVEOUTCAPS2();
+            if (waveOutGetDevCaps(deviceID, ref caps, (uint)Marshal.SizeOf<WAVEOUTCAPS2>()) == 0)
+            {
+                result.Add(new PlayerInfo { Id = deviceID, Name = caps.szPname });
+                //Console.WriteLine($"Device Name: {caps.szPname}");
+                //Console.WriteLine($"Channels: {caps.wChannels}");
+                //Console.WriteLine($"Formats: {caps.dwFormats}");
+                //Console.WriteLine($"Support: {caps.dwSupport}");
+                //Console.WriteLine($"Driver Version: {caps.vDriverVersion}");
+                //Console.WriteLine($"Manufacturer guid: {caps.ManufacturerGuid}");
+                //Console.WriteLine($"Product guid: {caps.ProductGuid}");
+                //Console.WriteLine($"Name guid: {caps.NameGuid}");
+            }
+        }
+        return result;
+    }
+
+    public WavePlayer(uint deviceId,int sampleRate, SampleFormat sampleFormat, SampleChannels sampleChannels, TimeSpan timePerBuffer, int numBuffers)
+    {
+        this.deviceId = deviceId;
         this.sampleRate = sampleRate;
         this.sampleFormat = sampleFormat;
         this.sampleChannels = sampleChannels;
@@ -110,38 +144,7 @@ public class WavePlayer
 
     public async Task Main(CancellationToken ct)
     {
-        uint numDevs = waveOutGetNumDevs();
-        Console.WriteLine($"Number of WaveOut devices: {numDevs}");
-
-        for (uint t = 0; t <= numDevs; t++)
-        {
-            var deviceID = t - 1;
-            var caps = new WAVEOUTCAPS2();
-            var result = waveOutGetDevCaps(deviceID, ref caps, (uint)Marshal.SizeOf<WAVEOUTCAPS2>());
-            AssertSuccess(result);
-
-            Console.WriteLine($"Device Name: {caps.szPname}");
-            Console.WriteLine($"Channels: {caps.wChannels}");
-            //Console.WriteLine($"Formats: {caps.dwFormats}");
-            //Console.WriteLine($"Support: {caps.dwSupport}");
-            //Console.WriteLine($"Driver Version: {caps.vDriverVersion}");
-            //Console.WriteLine($"Manufacturer guid: {caps.ManufacturerGuid}");
-            //Console.WriteLine($"Product guid: {caps.ProductGuid}");
-            //Console.WriteLine($"Name guid: {caps.NameGuid}");
-        }
-
         var blockAlign = (int)sampleFormat * (int)sampleChannels / 8;
-
-        //var wf = new WAVEFORMATEX
-        //{
-        //    wFormatTag = WAVEFORMATTAG.PCM,
-        //    nChannels = (ushort)sampleChannels,
-        //    nSamplesPerSec = (uint)sampleRate,
-        //    nAvgBytesPerSec = (uint)(sampleRate * (int)sampleFormat * (int)sampleChannels / 8),
-        //    nBlockAlign = (ushort)blockAlign,
-        //    wBitsPerSample = (ushort)sampleFormat,   // bits per sample of one channel
-        //    cbSize = 0
-        //};
 
         WAVEFORMATEXTENSIBLE wfe;
 
@@ -190,43 +193,60 @@ public class WavePlayer
         Console.WriteLine($"Bytes per buffer: {bytesPerBuffer}");
 
         _waveOutCallback = new WaveOutProc(WaveOutCallback);
-        var err = waveOutOpen(out var hWaveOut, 0, ref wfe, _waveOutCallback, IntPtr.Zero, WAVEINOUTOPENFLAGS.CALLBACK_FUNCTION);
-        AssertSuccess(err);
+        AssertSuccess(waveOutOpen(out var hWaveOut, deviceId, ref wfe, _waveOutCallback, IntPtr.Zero, WAVEINOUTOPENFLAGS.CALLBACK_FUNCTION));
 
-        if (wfe.Format.nSamplesPerSec != sampleRate)
-            throw new Exception($"Sample rate mismatch: {wfe.Format.nSamplesPerSec} != {sampleRate}");
-        
-        for (int i = 0; i < numberOfBuffers; i++)
+        try
         {
-            var buffer = BufferBase.CreateBuffer(sampleFormat,sampleChannels,hWaveOut,samplesPerBuffer, false);
-            _freeBuffers.Enqueue(buffer);
-        }
 
-        while (!ct.IsCancellationRequested)
-        {
-            var (msg, dwInstance, dwParam1, dwParam2) = await _channel.Reader.ReadAsync(ct).ConfigureAwait(false);
+            if (wfe.Format.nSamplesPerSec != sampleRate)
+                throw new Exception($"Sample rate mismatch: {wfe.Format.nSamplesPerSec} != {sampleRate}");
 
-            //Console.WriteLine("hWaveOut: " + hWaveOut.ToString("X"));
-            //Console.WriteLine("dwparam1: " + dwParam1.ToString("X"));
-            //Console.WriteLine("dwparam2: " + dwParam2.ToString("X"));
-
-            switch (msg)
+            for (int i = 0; i < numberOfBuffers; i++)
             {
-                case MMMessage.MM_WOM_OPEN:
-                case MMMessage.MM_WOM_DONE:
-                    CheckForDoneBuffers(hWaveOut);
-                    await PlayBuffers(hWaveOut);
-                    break;
+                var buffer = BufferBase.CreateBuffer(sampleFormat, sampleChannels, hWaveOut, samplesPerBuffer, false);
+                _freeBuffers.Enqueue(buffer);
+            }
 
-                case MMMessage.MM_WOM_CLOSE:
-                    Console.WriteLine("WaveOut device closed.");
-                    break;
+            while (!ct.IsCancellationRequested)
+            {
+                var (msg, dwInstance, dwParam1, dwParam2) = await _channel.Reader.ReadAsync(ct).ConfigureAwait(false);
 
-                default:
-                    Console.WriteLine($"Message received: {msg}");
-                    break;
+                //Console.WriteLine("hWaveOut: " + hWaveOut.ToString("X"));
+                //Console.WriteLine("dwparam1: " + dwParam1.ToString("X"));
+                //Console.WriteLine("dwparam2: " + dwParam2.ToString("X"));
+
+                switch (msg)
+                {
+                    case MMMessage.MM_WOM_OPEN:
+                    case MMMessage.MM_WOM_DONE:
+                        CheckForDoneBuffers(hWaveOut);
+                        await PlayBuffers(hWaveOut);
+                        break;
+
+                    case MMMessage.MM_WOM_CLOSE:
+                        Console.WriteLine("WaveOut device closed.");
+                        break;
+
+                    default:
+                        Console.WriteLine($"Message received: {msg}");
+                        break;
+                }
             }
         }
-
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (waveOutReset(hWaveOut) == (uint)MMRESULT.MMSYSERR_NOERROR)
+            {
+                foreach (var buffer in _activeBuffers)
+                {
+                    buffer.Unprepare();
+                    buffer.Dispose();
+                }
+            }
+            waveOutClose(hWaveOut);
+        }
     }
 }

@@ -1,12 +1,10 @@
 namespace Baksteen.Waves;
 
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using static MMInterop;
 using msgTuple = (Baksteen.Waves.MMInterop.MMMessage msg, IntPtr dwInstance, IntPtr dwParam1, IntPtr dwParam2);
-
 
 public class WaveRecorder
 {
@@ -19,6 +17,7 @@ public class WaveRecorder
         public string Name { get; set; } = string.Empty;
     }
 
+    private readonly uint deviceId;
     private readonly Channel<msgTuple> _channel = Channel.CreateUnbounded<msgTuple>();
     private readonly Queue<BufferBase> _freeBuffers = new();
     private readonly List<BufferBase> _activeBuffers = new();
@@ -122,14 +121,23 @@ public class WaveRecorder
         {
             var deviceID = t;
             var caps = new WAVEINCAPS2();
-            AssertSuccess(waveInGetDevCaps(deviceID, ref caps, (uint)Marshal.SizeOf<WAVEINCAPS2>()));
-            result.Add(new RecorderInfo { Id = deviceID, Name = caps.szPname });
+            if (waveInGetDevCaps(deviceID, ref caps, (uint)Marshal.SizeOf<WAVEINCAPS2>()) == 0)
+            {
+                result.Add(new RecorderInfo { Id = deviceID, Name = caps.szPname });
+                //caps.wChannels
+                //caps.dwFormats
+                //caps.ManufacturerGuid
+                //caps.ProductGuid
+                //caps.NameGuid
+                //caps.vDriverVersion
+            }
         }
         return result;
     }
 
-    public WaveRecorder(int sampleRate, SampleFormat sampleFormat, SampleChannels sampleChannels, TimeSpan timePerBuffer, int numBuffers)
+    public WaveRecorder(uint deviceId, int sampleRate, SampleFormat sampleFormat, SampleChannels sampleChannels, TimeSpan timePerBuffer, int numBuffers)
     {
+        this.deviceId = deviceId;
         this.sampleRate = sampleRate;
         this.sampleFormat = sampleFormat;
         this.sampleChannels = sampleChannels;
@@ -139,19 +147,6 @@ public class WaveRecorder
 
     public async Task Main(CancellationToken ct)
     {
-        uint numDevs = waveInGetNumDevs();
-        Console.WriteLine($"Number of WaveIn devices: {numDevs}");
-
-        for (uint t = 0; t < numDevs; t++)
-        {
-            var deviceID = t;
-            var caps = new WAVEINCAPS2();
-            var result = waveInGetDevCaps(deviceID, ref caps, (uint)Marshal.SizeOf<WAVEINCAPS2>());
-            AssertSuccess(result);
-            Console.WriteLine($"Device Name: {caps.szPname}");
-            Console.WriteLine($"Channels: {caps.wChannels}");
-        }
-
         var blockAlign = (int)sampleFormat * (int)sampleChannels / 8;
 
         WAVEFORMATEXTENSIBLE wfe;
@@ -201,32 +196,29 @@ public class WaveRecorder
         Console.WriteLine($"Bytes per buffer: {bytesPerBuffer}");
 
         _waveInCallback = new WaveInProc(WaveInCallback);
-        var err = waveInOpen(out var hWaveIn, 0, ref wfe, _waveInCallback, IntPtr.Zero, WAVEINOUTOPENFLAGS.CALLBACK_FUNCTION);
-        AssertSuccess(err);
-
-        if (wfe.Format.nSamplesPerSec != sampleRate)
-            throw new Exception($"Sample rate mismatch: {wfe.Format.nSamplesPerSec} != {sampleRate}");
-
-        for (int i = 0; i < numberOfBuffers; i++)
-        {
-            var buffer = BufferBase.CreateBuffer(sampleFormat, sampleChannels, hWaveIn, samplesPerBuffer, true);
-            _freeBuffers.Enqueue(buffer);
-        }
-
-        // Prepare and add initial buffers
-        while (_freeBuffers.TryDequeue(out var buffer))
-        {
-            buffer.Prepare();
-            buffer.AddBuffer();
-            _activeBuffers.Add(buffer);
-        }
-
-        // Start recording
-        var startErr = waveInStart(hWaveIn);
-        AssertSuccess(startErr);
+        AssertSuccess(waveInOpen(out var hWaveIn, deviceId, ref wfe, _waveInCallback, IntPtr.Zero, WAVEINOUTOPENFLAGS.CALLBACK_FUNCTION));
 
         try
         {
+            if (wfe.Format.nSamplesPerSec != sampleRate)
+                throw new Exception($"Sample rate mismatch: {wfe.Format.nSamplesPerSec} != {sampleRate}");
+
+            for (int i = 0; i < numberOfBuffers; i++)
+            {
+                var buffer = BufferBase.CreateBuffer(sampleFormat, sampleChannels, hWaveIn, samplesPerBuffer, true);
+                _freeBuffers.Enqueue(buffer);
+            }
+
+            // Prepare and add initial buffers
+            while (_freeBuffers.TryDequeue(out var buffer))
+            {
+                buffer.Prepare();
+                buffer.AddBuffer();
+                _activeBuffers.Add(buffer);
+            }
+
+            // Start recording
+            AssertSuccess(waveInStart(hWaveIn));
 
             while (!ct.IsCancellationRequested)
             {
@@ -254,9 +246,22 @@ public class WaveRecorder
                 }
             }
         }
-        catch (Exception ex)
+        catch(OperationCanceledException)
         {
-            System.Diagnostics.Debugger.Launch();
+            // Expected when cancellation is requested
+        }
+        finally
+        {
+            waveInStop(hWaveIn);
+            if(waveInReset(hWaveIn) == (uint)MMRESULT.MMSYSERR_NOERROR)
+            {
+                foreach (var buffer in _activeBuffers)
+                {
+                    buffer.Unprepare();
+                    buffer.Dispose();
+                }
+            }
+            waveInClose(hWaveIn);
         }
     }
 }
